@@ -6,6 +6,7 @@ from llama_index.core import (
     Settings,
     load_index_from_storage,
 )
+
 from llama_index.core.embeddings import resolve_embed_model
 from llama_index.llms.ollama import Ollama
 
@@ -19,7 +20,7 @@ Settings.llm = Ollama(model="llama2", request_timeout=180.0)
 PERSIST_DIR = "./storage"
 if not os.path.exists(PERSIST_DIR):
     # load the documents and create the index
-    documents = SimpleDirectoryReader("data").load_data()
+    documents = SimpleDirectoryReader("toy_data").load_data()
     index = VectorStoreIndex.from_documents(documents)
     # store it for later
     index.storage_context.persist(persist_dir=PERSIST_DIR)
@@ -30,5 +31,15 @@ else:
 
 # Either way we can now query the index
 query_engine = index.as_query_engine()
-response = query_engine.query("What did the author do growing up?")
+
+query = (
+    "How does the 1-loop R´enyi entropy in LCFT compare to that in ordinary CFT, ",
+    "particularly regarding the introduction of a new primary operator and the ",
+    "contributions of quasiprimary operators?"
+)
+
+print(query)
+
+response = query_engine.query(query)
+
 print(response)

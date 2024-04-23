@@ -1,5 +1,6 @@
 # Custom stuff
 data/
+toy_data/
 storage/
 
 # Byte-compiled / optimized / DLL files
