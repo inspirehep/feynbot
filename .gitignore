@@ -2,6 +2,7 @@
 data/
 toy_data/
 storage/
+flagged/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -8,6 +8,7 @@ demo = gr.Interface(
     fn=get_response,
     inputs=["text"],
     outputs=["text"],
+    flagging_dir="../flagged"
 )
 
 demo.launch(share=True)
