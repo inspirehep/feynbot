@@ -1,6 +1,7 @@
 import logging
 import sys
 import os
+import yaml
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
@@ -12,10 +13,19 @@ from llama_index.core import load_index_from_storage
 from llama_index.llms.openai import OpenAI
 
 
-def index_documents(persist_dir):
+def load_config(config_path):
+    with open(os.path.join(os.getcwd(), config_path)) as stream:
+        try:
+            config = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
+    return config
+
+def index_documents(config):
+    persist_dir = config["llama_index"]["persist_dir"]
     if not os.path.exists(persist_dir):
         # load the documents and create the index
-        documents = SimpleDirectoryReader("../toy_data").load_data()
+        documents = SimpleDirectoryReader(config["llama_index"]["data_dir"]).load_data()
         index = VectorStoreIndex.from_documents(documents)
         # store it for later
         index.storage_context.persist(persist_dir=persist_dir)
@@ -26,27 +36,24 @@ def index_documents(persist_dir):
     return index
 
 def get_response(query):
+    config = load_config("config.yaml")
+
     # set global settings config
-    llm = OpenAI(model="gpt-3.5-turbo", temperature=0)
+    llm = OpenAI(
+        model=config["llama_index"]["model"], 
+        temperature=config["llama_index"]["temperature"]
+    )
     Settings.llm = llm
-    Settings.chunk_size = 512
+    Settings.chunk_size = config["llama_index"]["chunk_size"]
 
     # check if storage already exists
-    PERSIST_DIR = "../storage"
-    index = index_documents(PERSIST_DIR)
+    index = index_documents(config)
 
     query_engine = index.as_query_engine(
-        similarity_top_k=3,
-        streaming=True,
+        similarity_top_k=config["llama_index"]["similarity_top_k"],
+        streaming=config["llama_index"]["streaming"],
     )
 
-    # query = (
-    #     "How does the 1-loop R´enyi entropy in LCFT compare to that in ordinary CFT, "
-    #     "particularly regarding the introduction of a new primary operator and the "
-    #     "contributions of quasiprimary operators?"
-    # )
-
     response = query_engine.query(query)
-    # response.print_response_stream()
 
     return response
