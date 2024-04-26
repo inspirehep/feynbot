@@ -1,7 +1,7 @@
 gradio:
   flagging_dir: "flagged"
   allow_flagging: "auto"
-  share: False
+  share: True
 llama_index:
   data_dir: "toy_data"
   persist_dir: "storage"
