@@ -16,17 +16,17 @@ if __name__ == "__main__":
                     "introduction of a new primary operator and the "
                     "contributions of quasiprimary operators?"
                 ),
-                label="Input", 
+                label="Input",
                 lines=3
             )
         ],
-        outputs=[gr.Textbox(label="Output", lines=3)],
+        outputs=[
+            gr.Textbox(label="Output", lines=3),
+            gr.Textbox(label="References", lines=3)
+        ],
         title="Feynbot: talking with INSPIRE",
-        description=(
-            f"![Feynbot](file={os.path.join(os.getcwd(), 'assets/feynbot.png')})"
-        ),
         allow_flagging=config["gradio"]["allow_flagging"],
         flagging_dir=config["gradio"]["flagging_dir"]
     )
-    
+
     demo.launch(share=config["gradio"]["share"], allowed_paths=["./"])

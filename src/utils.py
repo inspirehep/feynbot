@@ -12,6 +12,7 @@ from llama_index.core import Settings
 from llama_index.core import StorageContext
 from llama_index.core import load_index_from_storage
 from llama_index.core.callbacks import CallbackManager, TokenCountingHandler
+from llama_index.core.query_engine import CitationQueryEngine
 from llama_index.llms.openai import OpenAI
 
 
@@ -56,12 +57,21 @@ def get_response(query):
     print("Indexing Embedding Tokens: ", token_counter.total_embedding_token_count)
     token_counter.reset_counts()
 
-    query_engine = index.as_query_engine(
-        similarity_top_k=config["llama_index"]["similarity_top_k"],
-        streaming=config["llama_index"]["streaming"],
+    # query_engine = index.as_query_engine(
+    #     similarity_top_k=config["llama_index"]["similarity_top_k"],
+    #     streaming=config["llama_index"]["streaming"],
+    # )
+    query_engine = CitationQueryEngine.from_args(
+        index,
+        citation_chunk_size=1024,
+        similarity_top_k=config["llama_index"]["similarity_top_k"]
     )
 
     response = query_engine.query(query)
+    print("Number of source nodes:", len(response.source_nodes))
+    for node in response.source_nodes:
+        print(f"Node ID: {node.node_id}")
+        print(f"Node Metadata: {node.metadata}")
 
     # Tokens used by querying
     print(
@@ -78,6 +88,7 @@ def get_response(query):
         token_counter.total_llm_token_count,
         "\n",
     )
+
     token_counter.reset_counts()
 
-    return response
+    return [response, "\n".join([f"[{i+1}] {node.metadata['file_name']}" for i, node in enumerate(response.source_nodes)])]
