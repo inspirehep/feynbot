@@ -3,6 +3,7 @@ data/
 toy_data/
 storage/
 flagged/
+nohup.out
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
