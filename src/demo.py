@@ -29,4 +29,8 @@ if __name__ == "__main__":
         flagging_dir=config["gradio"]["flagging_dir"]
     )
 
-    demo.launch(share=config["gradio"]["share"], allowed_paths=["./"])
+    demo.launch(
+        server_name="0.0.0.0", 
+        share=config["gradio"]["share"], 
+        allowed_paths=["./"]
+    )
