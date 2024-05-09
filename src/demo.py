@@ -30,7 +30,7 @@ if __name__ == "__main__":
     )
 
     demo.launch(
-        server_name="0.0.0.0", 
-        share=config["gradio"]["share"], 
-        allowed_paths=["./"]
+        server_name="0.0.0.0",
+        share=config["gradio"]["share"],
+        root_path="/feynbot"
     )
