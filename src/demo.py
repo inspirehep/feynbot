@@ -1,4 +1,3 @@
-import os
 import gradio as gr
 
 from utils import get_response, load_config

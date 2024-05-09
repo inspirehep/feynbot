@@ -3,18 +3,22 @@ import sys
 import os
 import yaml
 import tiktoken
+import chromadb
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
-from llama_index.core import Settings
-from llama_index.core import StorageContext
-from llama_index.core import load_index_from_storage
+from llama_index.core import (
+    VectorStoreIndex, 
+    SimpleDirectoryReader, 
+    StorageContext, 
+    Settings
+)
 from llama_index.core.callbacks import CallbackManager, TokenCountingHandler
 from llama_index.core.query_engine import CitationQueryEngine
 from llama_index.llms.openai import OpenAI
-
+from llama_index.vector_stores.chroma import ChromaVectorStore
+from llama_index.embeddings.openai import OpenAIEmbedding
 
 def load_config(config_path):
     with open(os.path.join(os.getcwd(), config_path)) as stream:
@@ -24,18 +28,43 @@ def load_config(config_path):
             print(exc)
     return config
 
-def index_documents(config):
-    persist_dir = config["llama_index"]["persist_dir"]
-    if not os.path.exists(persist_dir):
-        # load the documents and create the index
-        documents = SimpleDirectoryReader(config["llama_index"]["data_dir"]).load_data()
-        index = VectorStoreIndex.from_documents(documents)
-        # store it for later
-        index.storage_context.persist(persist_dir=persist_dir)
-    else:
-        # load the existing index
-        storage_context = StorageContext.from_defaults(persist_dir=persist_dir)
-        index = load_index_from_storage(storage_context)
+def create_index(config):
+    print("Creating index collection")
+
+    # define embedding function
+    embed_model = OpenAIEmbedding()
+
+    # load documents
+    documents = SimpleDirectoryReader(config["llama_index"]["data_dir"]).load_data()
+
+    # create client and a new collection
+    db = chromadb.PersistentClient(path=config["chroma_db"]["path"])
+    chroma_collection = db.create_collection(config["chroma_db"]["collection"])
+
+    # set up ChromaVectorStore and load in data
+    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    index = VectorStoreIndex.from_documents(
+        documents, storage_context=storage_context, embed_model=embed_model
+    )
+    return index
+
+def get_index(config):
+    print("Getting index collection")
+
+    # define embedding function
+    embed_model = OpenAIEmbedding()
+
+    # create client and a new collection
+    db = chromadb.PersistentClient(path=config["chroma_db"]["path"])
+    chroma_collection = db.get_collection(config["chroma_db"]["collection"])
+
+    # set up ChromaVectorStore and load in data
+    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+    index = VectorStoreIndex.from_vector_store(
+        vector_store,
+        embed_model=embed_model,
+    )
     return index
 
 def get_response(query):
@@ -50,17 +79,14 @@ def get_response(query):
     Settings.llm = llm
     Settings.chunk_size = config["llama_index"]["chunk_size"]
     Settings.callback_manager = CallbackManager([token_counter])
+
     # check if storage already exists
-    index = index_documents(config)
+    index = get_index(config)
 
     # Tokens used by indexing
     print("Indexing Embedding Tokens: ", token_counter.total_embedding_token_count)
     token_counter.reset_counts()
 
-    # query_engine = index.as_query_engine(
-    #     similarity_top_k=config["llama_index"]["similarity_top_k"],
-    #     streaming=config["llama_index"]["streaming"],
-    # )
     query_engine = CitationQueryEngine.from_args(
         index,
         citation_chunk_size=1024,
