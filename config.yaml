@@ -2,10 +2,12 @@ gradio:
   flagging_dir: "flagged"
   allow_flagging: "auto"
   share: False
+  questions: "questions.json"
 llama_index:
   data_dir: "toy_data"
   persist_dir: "storage"
-  model: "gpt-3.5-turbo"
+  embedding_model: "text-embedding-3-small"
+  llm_model: "gpt-3.5-turbo"
   temperature: 0
   chunk_size: 512
   similarity_top_k: 3

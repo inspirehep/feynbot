@@ -1,22 +1,25 @@
+import json
 import gradio as gr
-
 from utils import get_response, load_config
 
 if __name__ == "__main__":
     config = load_config("config.yaml")
+    with open(config["gradio"]["questions"], "r") as f:
+        questions = json.load(f)
 
     demo = gr.Interface(
         fn=get_response,
         inputs=[
             gr.Textbox(
-                value=(
-                    "How does the 1-loop Rényi entropy in LCFT compare to "
-                    "that in ordinary CFT, particularly regarding the "
-                    "introduction of a new primary operator and the "
-                    "contributions of quasiprimary operators?"
-                ),
-                label="Input",
-                lines=3
+                value="",
+                lines=3,
+                placeholder="Ask Feynbot anything...",
+                label="Query"
+            ),
+            gr.Dropdown(
+                [question for question in questions.values()],
+                label="Example queries",
+                info="Pick a question"
             )
         ],
         outputs=[
@@ -31,5 +34,6 @@ if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
         share=config["gradio"]["share"],
-        root_path="/feynbot"
+        root_path="/feynbot",
+        show_api=False
     )

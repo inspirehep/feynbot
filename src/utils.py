@@ -19,6 +19,7 @@ from llama_index.core.query_engine import CitationQueryEngine
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.embeddings.openai import OpenAIEmbedding
+from chromadb.config import Settings
 
 def load_config(config_path):
     with open(os.path.join(os.getcwd(), config_path)) as stream:
@@ -28,17 +29,21 @@ def load_config(config_path):
             print(exc)
     return config
 
-def create_index(config):
+def _create_index(config):
     print("Creating index collection")
 
     # define embedding function
-    embed_model = OpenAIEmbedding()
+    embed_model = OpenAIEmbedding(
+        # model=config["llama_index"]["embedding_model"],
+        # embed_batch_size=10
+        )
 
     # load documents
     documents = SimpleDirectoryReader(config["llama_index"]["data_dir"]).load_data()
 
     # create client and a new collection
-    db = chromadb.PersistentClient(path=config["chroma_db"]["path"])
+    db = chromadb.PersistentClient(path=config["chroma_db"]["path"], settings=Settings(allow_reset=True))
+    db.reset()
     chroma_collection = db.create_collection(config["chroma_db"]["collection"])
 
     # set up ChromaVectorStore and load in data
@@ -49,10 +54,11 @@ def create_index(config):
     )
     return index
 
-def get_index(config):
+def _get_index(config):
     print("Getting index collection")
 
     # define embedding function
+    # embed_model = OpenAIEmbedding(model=config["llama_index"]["embedding_model"])
     embed_model = OpenAIEmbedding()
 
     # create client and a new collection
@@ -67,13 +73,35 @@ def get_index(config):
     )
     return index
 
-def get_response(query):
+
+def postprocess_response(response):
+
+    inspire_url = "https://inspirehep.net/literature?sort=mostrecent&size=25&page=1&q="
+    postprocess_response = [
+        response, 
+        "\n".join(
+            [
+                f"[{i+1}] {"".join(inspire_url, node.metadata['file_name'])}" 
+                for i, node 
+                in enumerate(response.source_nodes)
+            ]
+        )
+    ]
+
+    return postprocess_response
+
+
+def get_response(manual_query, example_query):
     config = load_config("config.yaml")
 
+    # Use the manual query if set else use an example
+    query = manual_query if manual_query else example_query
+    print(f"Query selected: {query}")
+
     # set global settings config
-    token_counter = TokenCountingHandler(tokenizer=tiktoken.encoding_for_model(config["llama_index"]["model"]).encode)
+    token_counter = TokenCountingHandler(tokenizer=tiktoken.encoding_for_model(config["llama_index"]["llm_model"]).encode)
     llm = OpenAI(
-        model=config["llama_index"]["model"],
+        model=config["llama_index"]["llm_model"],
         temperature=config["llama_index"]["temperature"]
     )
     Settings.llm = llm
@@ -81,7 +109,7 @@ def get_response(query):
     Settings.callback_manager = CallbackManager([token_counter])
 
     # check if storage already exists
-    index = get_index(config)
+    index = _create_index(config)
 
     # Tokens used by indexing
     print("Indexing Embedding Tokens: ", token_counter.total_embedding_token_count)
@@ -94,6 +122,7 @@ def get_response(query):
     )
 
     response = query_engine.query(query)
+
     print("Number of source nodes:", len(response.source_nodes))
     for node in response.source_nodes:
         print(f"Node ID: {node.node_id}")
@@ -117,4 +146,6 @@ def get_response(query):
 
     token_counter.reset_counts()
 
-    return [response, "\n".join([f"[{i+1}] {node.metadata['file_name']}" for i, node in enumerate(response.source_nodes)])]
+    postprocessed_response = postprocess_response(response)
+
+    return postprocessed_response

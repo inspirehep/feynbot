@@ -1,6 +1,7 @@
 # Custom stuff
 data/
 toy_data/
+toy_data_50/
 storage/
 flagged/
 chroma_db/
