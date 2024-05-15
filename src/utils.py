@@ -1,6 +1,7 @@
 import logging
 import sys
 import os
+import re
 import yaml
 import tiktoken
 import chromadb
@@ -77,15 +78,80 @@ def _get_index(config):
 def postprocess_response(response):
 
     inspire_url = "https://inspirehep.net/literature?sort=mostrecent&size=25&page=1&q="
+
+    references = {
+        i: os.path.splitext(node.metadata['file_name'])[0]
+        for i, node 
+        in enumerate(response.source_nodes)
+    }
+
+    # # get only the first occurence of the reference to avoid duplicates
+    # unique_references = {}
+    # for k, v in references.items():
+    #     unique_references.setdefault(v, k)
+    # references = {v: k for k, v in unique_references.items()}
+
+    # Create a set to keep track of encountered files
+    encountered_files = set()
+
+    # Create a new dictionary to store the updated data
+    new_references = {}
+
+    # Initialize a variable to track the new index
+    new_index = 1
+
+    # Create a dictionary to store the mapping of old indices to new indices
+    index_mapping = {}
+
+    for key, reference in references.items():
+        # Check if the file has been encountered before
+        if reference not in encountered_files:
+            # If not encountered, add it to the set and the new dictionary with updated index
+            encountered_files.add(reference)
+            new_references[new_index] = reference
+            index_mapping[key] = new_index
+            new_index += 1
+        else:
+            # If encountered, update the index mapping
+            index_mapping[key] = min(index_mapping.get(k, float('inf')) for k, v in references.items() if v == reference)
+
+    response = response.response if not isinstance(response, str) else response
+    
+    print("-"*20)
+    print("BEFORE posprocessing")
+    print("Index mapping:", index_mapping)
+    print("References:", references)
+    print("New References:", new_references)
+    print("Response:", response)
+    print("-"*20)
+
+    # Replace indices in the text according to the index_mapping
+    for old_index, new_index in index_mapping.items():
+        response = response.replace(f"[{old_index+1}]", f"[{new_index}]")
+
+    indices_in_text = set(map(int, re.findall(r'\[(\d+)\]', response)))
+    # Filter new_data to keep only items with indices appearing in the text
+    new_references_filtered = {index: file_name for index, file_name in new_references.items() if index in indices_in_text}
+
+    print("-"*20)
+    print("AFTER posprocessing")
+    print("New References filtered:", new_references_filtered)
+    print("Response:", response)
+    print("-"*20)
+    
+
+    # reference outputs as links in Markdown format
+    md_references = "\n\n".join(
+        [
+            f"[[{i}] {reference}]({"".join([inspire_url, reference])})" 
+            for i, reference 
+            in new_references_filtered.items()
+        ]
+    )
+
     postprocess_response = [
         response, 
-        "\n".join(
-            [
-                f"[{i+1}] {"".join(inspire_url, node.metadata['file_name'])}" 
-                for i, node 
-                in enumerate(response.source_nodes)
-            ]
-        )
+        md_references
     ]
 
     return postprocess_response
@@ -109,7 +175,7 @@ def get_response(manual_query, example_query):
     Settings.callback_manager = CallbackManager([token_counter])
 
     # check if storage already exists
-    index = _create_index(config)
+    index = _get_index(config)
 
     # Tokens used by indexing
     print("Indexing Embedding Tokens: ", token_counter.total_embedding_token_count)
