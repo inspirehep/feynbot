@@ -1,4 +1,3 @@
-import os
 import json
 import gradio as gr
 from utils import get_response, load_config
@@ -41,6 +40,5 @@ if __name__ == "__main__":
         server_name="0.0.0.0",
         share=config["gradio"]["share"],
         root_path="/feynbot",
-        show_api=False,
-        allowed_paths=["/"]
+        show_api=False
     )

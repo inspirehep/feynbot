@@ -143,7 +143,7 @@ def postprocess_response(response):
     # reference outputs as links in Markdown format
     md_references = "\n\n".join(
         [
-            f"[[{i}] {reference}]({"".join([inspire_url, reference])})" 
+            f"[[{i}] {reference}]({''.join([inspire_url, reference])})" 
             for i, reference 
             in new_references_filtered.items()
         ]
