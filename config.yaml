@@ -4,7 +4,7 @@ gradio:
   share: False
   questions: "questions.json"
 llama_index:
-  data_dir: "toy_data_100"
+  data_dir: "data_1k"
   persist_dir: "storage"
   embedding_model: "text-embedding-3-small"
   llm_model: "gpt-3.5-turbo"

@@ -175,6 +175,7 @@ def get_response(manual_query, example_query):
     Settings.callback_manager = CallbackManager([token_counter])
 
     # check if storage already exists
+    # index = _create_index(config)
     index = _get_index(config)
 
     # Tokens used by indexing

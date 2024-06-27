@@ -1,9 +1,9 @@
 # Custom stuff
-data/
+data*/
 toy_data*/
 storage/
 flagged/
-chroma_db/
+chroma_db*/
 nohup.out
 
 # Byte-compiled / optimized / DLL files
