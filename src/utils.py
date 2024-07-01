@@ -172,6 +172,11 @@ def get_response(manual_query, example_query):
     )
     Settings.llm = llm
     Settings.chunk_size = config["llama_index"]["chunk_size"]
+    # Settings.chunk_overlap = 20
+    # maximum input size to the LLM
+    # Settings.context_window = 4096
+    # number of tokens reserved for text generation.
+    # Settings.num_output = 256
     Settings.callback_manager = CallbackManager([token_counter])
 
     # check if storage already exists
