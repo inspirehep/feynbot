@@ -3,9 +3,8 @@ This demo has been built following the official LlamaIndex [Starter Tutorial (Lo
 
 Model tested:
 
-* ~~Embedding model: [BAAI/bge-small-en-v1.5](https://huggingface.co/BAAI/bge-small-en-v1.5)~~
-* ~~LLM: [Llama2](https://ollama.com/library/llama2) served through [Ollama](https://github.com/ollama/ollama)~~
-* [GPT-3.5-turbo](https://platform.openai.com/docs/models/gpt-3-5-turbo)
+* Embedding model: [text-embedding-3-small](https://platform.openai.com/docs/models/embeddings)
+* Generative model: [GPT-3.5-turbo](https://platform.openai.com/docs/models/gpt-3-5-turbo)
 
 ## Usage guide
 
@@ -13,9 +12,11 @@ Model tested:
 
 `python3 -m venv .venv`
 
+`source .venv/bin/activate`
+
 2. Install the requirements:
 
-`source .venv/bin/activate`
+`pip install -r requirements.txt`
 
 3. Set up the OpenAI key in a environment variable:
 
