@@ -1,11 +1,6 @@
 # Use the official Python 3.12 image as the base
 FROM python:3.11-slim
 
-# Install any necessary system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    build-essential
-
 # Set the working directory
 WORKDIR /app
 
