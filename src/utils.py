@@ -20,7 +20,6 @@ from llama_index.core.query_engine import CitationQueryEngine
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from chromadb.config import Settings
 
 def load_config(config_path):
     with open(os.path.join(os.getcwd(), config_path)) as stream:
@@ -37,7 +36,10 @@ def _create_index(config):
     documents = SimpleDirectoryReader(config["llama_index"]["data_dir"]).load_data()
 
     # create client and a new collection
-    db = chromadb.PersistentClient(path=config["chroma_db"]["path"], settings=Settings(allow_reset=True))
+    db = chromadb.PersistentClient(
+        path=config["chroma_db"]["path"], 
+        settings=chromadb.config.Settings(allow_reset=True)
+    )
     db.reset()
     chroma_collection = db.create_collection(config["chroma_db"]["collection"])
 
