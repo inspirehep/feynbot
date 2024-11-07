@@ -19,7 +19,7 @@ from llama_index.core.callbacks import CallbackManager, TokenCountingHandler
 from llama_index.core.query_engine import CitationQueryEngine
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.chroma import ChromaVectorStore
-from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from chromadb.config import Settings
 
 def load_config(config_path):
@@ -33,12 +33,6 @@ def load_config(config_path):
 def _create_index(config):
     print("Creating index collection")
 
-    # define embedding function
-    embed_model = OpenAIEmbedding(
-        # model=config["llama_index"]["embedding_model"],
-        # embed_batch_size=10
-        )
-
     # load documents
     documents = SimpleDirectoryReader(config["llama_index"]["data_dir"]).load_data()
 
@@ -51,16 +45,12 @@ def _create_index(config):
     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
     index = VectorStoreIndex.from_documents(
-        documents, storage_context=storage_context, embed_model=embed_model
+        documents, storage_context=storage_context
     )
     return index
 
 def _get_index(config):
     print("Getting index collection")
-
-    # define embedding function
-    # embed_model = OpenAIEmbedding(model=config["llama_index"]["embedding_model"])
-    embed_model = OpenAIEmbedding()
 
     # create client and a new collection
     db = chromadb.PersistentClient(path=config["chroma_db"]["path"])
@@ -69,8 +59,7 @@ def _get_index(config):
     # set up ChromaVectorStore and load in data
     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
     index = VectorStoreIndex.from_vector_store(
-        vector_store,
-        embed_model=embed_model,
+        vector_store
     )
     return index
 
@@ -85,34 +74,28 @@ def postprocess_response(response):
         in enumerate(response.source_nodes)
     }
 
-    # # get only the first occurence of the reference to avoid duplicates
-    # unique_references = {}
-    # for k, v in references.items():
-    #     unique_references.setdefault(v, k)
-    # references = {v: k for k, v in unique_references.items()}
-
-    # Create a set to keep track of encountered files
+    # create a set to keep track of encountered files
     encountered_files = set()
 
-    # Create a new dictionary to store the updated data
+    # create a new dictionary to store the updated data
     new_references = {}
 
-    # Initialize a variable to track the new index
+    # initialize a variable to track the new index
     new_index = 1
 
-    # Create a dictionary to store the mapping of old indices to new indices
+    # create a dictionary to store the mapping of old indices to new indices
     index_mapping = {}
 
     for key, reference in references.items():
-        # Check if the file has been encountered before
+        # check if the file has been encountered before
         if reference not in encountered_files:
-            # If not encountered, add it to the set and the new dictionary with updated index
+            # if not encountered, add it to the set and the new dictionary with updated index
             encountered_files.add(reference)
             new_references[new_index] = reference
             index_mapping[key] = new_index
             new_index += 1
         else:
-            # If encountered, update the index mapping
+            # if encountered, update the index mapping
             index_mapping[key] = min(index_mapping.get(k, float('inf')) for k, v in references.items() if v == reference)
 
     response = response.response if not isinstance(response, str) else response
@@ -125,12 +108,12 @@ def postprocess_response(response):
     print("Response:", response)
     print("-"*20)
 
-    # Replace indices in the text according to the index_mapping
+    # replace indices in the text according to the index_mapping
     for old_index, new_index in index_mapping.items():
         response = response.replace(f"[{old_index+1}]", f"[{new_index}]")
 
     indices_in_text = set(map(int, re.findall(r'\[(\d+)\]', response)))
-    # Filter new_data to keep only items with indices appearing in the text
+    # filter new_data to keep only items with indices appearing in the text
     new_references_filtered = {index: file_name for index, file_name in new_references.items() if index in indices_in_text}
 
     print("-"*20)
@@ -160,30 +143,28 @@ def postprocess_response(response):
 def get_response(manual_query, example_query):
     config = load_config("config.yaml")
 
-    # Use the manual query if set else use an example
+    # use the manual query if set else use an example
     query = manual_query if manual_query else example_query
     print(f"Query selected: {query}")
 
     # set global settings config
     token_counter = TokenCountingHandler(tokenizer=tiktoken.encoding_for_model(config["llama_index"]["llm_model"]).encode)
-    llm = OpenAI(
+
+    Settings.embed_model = HuggingFaceEmbedding(model_name=config["llama_index"]["embedding_model"])
+    
+    Settings.llm = OpenAI(
         model=config["llama_index"]["llm_model"],
         temperature=config["llama_index"]["temperature"]
     )
-    Settings.llm = llm
+
     Settings.chunk_size = config["llama_index"]["chunk_size"]
-    # Settings.chunk_overlap = 20
-    # maximum input size to the LLM
-    # Settings.context_window = 4096
-    # number of tokens reserved for text generation.
-    # Settings.num_output = 256
     Settings.callback_manager = CallbackManager([token_counter])
 
     # TODO: check if storage already exists
     # index = _create_index(config)
     index = _get_index(config)
 
-    # Tokens used by indexing
+    # tokens used by indexing
     print("Indexing Embedding Tokens: ", token_counter.total_embedding_token_count)
     token_counter.reset_counts()
 
@@ -200,7 +181,7 @@ def get_response(manual_query, example_query):
         print(f"Node ID: {node.node_id}")
         print(f"Node Metadata: {node.metadata}")
 
-    # Tokens used by querying
+    # tokens used by querying
     print(
         "Query Embedding Tokens: ",
         token_counter.total_embedding_token_count,
