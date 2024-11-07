@@ -8,6 +8,7 @@ Model tested:
 
 ## Usage guide
 
+### Local installation
 1. Create a virtual environment and activate it:
 
 `python3 -m venv .venv`
@@ -25,3 +26,15 @@ Model tested:
 3. Launch the app:
 
 `python3 src/demo.py`
+
+### Docker
+1. Build the Docker image:
+
+`docker build -t feynbot .`
+
+2. Run the Docker container:
+
+`docker run -e OPENAI_API_KEY=<your_openai_api_key> -p 7860:7860 feynbot`
+
+This will start the Gradio web app, which will be accesible at http://localhost:7860
+

@@ -4,7 +4,7 @@ gradio:
   share: False
   questions: "questions.json"
 llama_index:
-  data_dir: "data_10k"
+  data_dir: "data"
   persist_dir: "storage"
   embedding_model: "text-embedding-3-small"
   llm_model: "gpt-3.5-turbo"
@@ -13,5 +13,5 @@ llama_index:
   similarity_top_k: 3
   streaming: True
 chroma_db:
-  path: "./chroma_db_10k"
+  path: "./chroma_db"
   collection: "hepth"
