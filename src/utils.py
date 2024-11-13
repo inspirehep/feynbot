@@ -3,23 +3,24 @@ import sys
 import os
 import re
 import yaml
-import tiktoken
-import chromadb
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
+from os import getenv
 from llama_index.core import (
     VectorStoreIndex, 
     SimpleDirectoryReader, 
     StorageContext, 
     Settings
 )
-from llama_index.core.callbacks import CallbackManager, TokenCountingHandler
 from llama_index.core.query_engine import CitationQueryEngine
 from llama_index.llms.openai import OpenAI
-from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.vector_stores.opensearch import (
+    OpensearchVectorStore,
+    OpensearchVectorClient,
+)
 
 def load_config(config_path):
     with open(os.path.join(os.getcwd(), config_path)) as stream:
@@ -29,42 +30,49 @@ def load_config(config_path):
             print(exc)
     return config
 
-def _create_index(config):
-    print("Creating index collection")
+def create_opensearch_index(config):
+    print("Creating and populating OpenSearch index collection")
 
     # load documents
     documents = SimpleDirectoryReader(config["llama_index"]["data_dir"]).load_data()
 
-    # create client and a new collection
-    db = chromadb.PersistentClient(
-        path=config["chroma_db"]["path"], 
-        settings=chromadb.config.Settings(allow_reset=True)
+    # OpensearchVectorClient encapsulates logic for a single opensearch index with vector search enabled
+    client = OpensearchVectorClient(
+        getenv("OPENSEARCH_ENDPOINT", config["opensearch"]["endpoint"]), 
+        getenv("OPENSEARCH_INDEX", config["opensearch"]["index"]), 
+        config["opensearch"]["dim"], 
+        embedding_field=config["opensearch"]["embedding_field"], 
+        text_field=config["opensearch"]["text_field"]
     )
-    db.reset()
-    chroma_collection = db.create_collection(config["chroma_db"]["collection"])
 
-    # set up ChromaVectorStore and load in data
-    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+    # initialize vector store
+    vector_store = OpensearchVectorStore(client)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
+    # initialize an index using our sample data and the client we just created
     index = VectorStoreIndex.from_documents(
-        documents, storage_context=storage_context
+        documents=documents, storage_context=storage_context
     )
     return index
 
-def _get_index(config):
-    print("Getting index collection")
+def get_opensearch_index(config):
+    print("Loading existing OpenSearch index collection")
 
-    # create client and a new collection
-    db = chromadb.PersistentClient(path=config["chroma_db"]["path"])
-    chroma_collection = db.get_collection(config["chroma_db"]["collection"])
-
-    # set up ChromaVectorStore and load in data
-    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-    index = VectorStoreIndex.from_vector_store(
-        vector_store
+    # OpensearchVectorClient encapsulates logic for a single opensearch index with vector search enabled
+    client = OpensearchVectorClient(
+        getenv("OPENSEARCH_ENDPOINT", config["opensearch"]["endpoint"]), 
+        getenv("OPENSEARCH_INDEX", config["opensearch"]["index"]), 
+        config["opensearch"]["dim"], 
+        embedding_field=config["opensearch"]["embedding_field"], 
+        text_field=config["opensearch"]["text_field"]
     )
-    return index
 
+    # initialize vector store
+    vector_store = OpensearchVectorStore(client)
+
+    # initialize an index using our sample data and the client we just created
+    index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
+    return index
 
 def postprocess_response(response):
 
@@ -147,28 +155,16 @@ def get_response(manual_query, example_query):
 
     # use the manual query if set else use an example
     query = manual_query if manual_query else example_query
-    print(f"Query selected: {query}")
 
-    # set global settings config
-    token_counter = TokenCountingHandler(tokenizer=tiktoken.encoding_for_model(config["llama_index"]["llm_model"]).encode)
-
+    # setup llamaindex settings
     Settings.embed_model = HuggingFaceEmbedding(model_name=config["llama_index"]["embedding_model"])
-    
+    Settings.chunk_size = config["llama_index"]["chunk_size"]
     Settings.llm = OpenAI(
         model=config["llama_index"]["llm_model"],
         temperature=config["llama_index"]["temperature"]
     )
 
-    Settings.chunk_size = config["llama_index"]["chunk_size"]
-    Settings.callback_manager = CallbackManager([token_counter])
-
-    # TODO: check if storage already exists
-    # index = _create_index(config)
-    index = _get_index(config)
-
-    # tokens used by indexing
-    print("Indexing Embedding Tokens: ", token_counter.total_embedding_token_count)
-    token_counter.reset_counts()
+    index = get_opensearch_index(config)
 
     query_engine = CitationQueryEngine.from_args(
         index,
@@ -182,24 +178,6 @@ def get_response(manual_query, example_query):
     for node in response.source_nodes:
         print(f"Node ID: {node.node_id}")
         print(f"Node Metadata: {node.metadata}")
-
-    # tokens used by querying
-    print(
-        "Query Embedding Tokens: ",
-        token_counter.total_embedding_token_count,
-        "\n",
-        "LLM Prompt Tokens: ",
-        token_counter.prompt_llm_token_count,
-        "\n",
-        "LLM Completion Tokens: ",
-        token_counter.completion_llm_token_count,
-        "\n",
-        "Total LLM Token Count: ",
-        token_counter.total_llm_token_count,
-        "\n",
-    )
-
-    token_counter.reset_counts()
 
     postprocessed_response = postprocess_response(response)
 
