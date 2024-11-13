@@ -22,6 +22,7 @@ Deprecated==1.2.14
 dirtyjson==1.0.8
 distro==1.9.0
 durationpy==0.9
+Events==0.5
 fastapi==0.115.4
 ffmpy==0.4.0
 filelock==3.16.1
@@ -60,9 +61,11 @@ llama-index-llms-openai==0.2.16
 llama-index-multi-modal-llms-openai==0.2.3
 llama-index-program-openai==0.2.0
 llama-index-question-gen-openai==0.2.0
+llama-index-readers-elasticsearch==0.2.1
 llama-index-readers-file==0.2.2
 llama-index-readers-llama-parse==0.3.0
 llama-index-vector-stores-chroma==0.3.0
+llama-index-vector-stores-opensearch==0.4.1
 llama-parse==0.5.13
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
@@ -92,6 +95,7 @@ nvidia-nvtx-cu12==12.4.127
 oauthlib==3.2.2
 onnxruntime==1.20.0
 openai==1.54.3
+opensearch-py==2.7.1
 opentelemetry-api==1.28.0
 opentelemetry-exporter-otlp-proto-common==1.28.0
 opentelemetry-exporter-otlp-proto-grpc==1.28.0
