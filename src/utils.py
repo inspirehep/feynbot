@@ -6,6 +6,7 @@ import yaml
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
+from llama_index.llms.ollama import Ollama
 
 from os import getenv
 from llama_index.core import (
@@ -15,8 +16,7 @@ from llama_index.core import (
     Settings
 )
 from llama_index.core.query_engine import CitationQueryEngine
-from llama_index.llms.openai import OpenAI
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.vector_stores.opensearch import (
     OpensearchVectorStore,
     OpensearchVectorClient,
@@ -38,11 +38,15 @@ def create_opensearch_index(config):
 
     # OpensearchVectorClient encapsulates logic for a single opensearch index with vector search enabled
     client = OpensearchVectorClient(
-        getenv("OPENSEARCH_ENDPOINT", config["opensearch"]["endpoint"]), 
-        getenv("OPENSEARCH_INDEX", config["opensearch"]["index"]), 
-        config["opensearch"]["dim"], 
+        str(getenv("OPENSEARCH_HOST")), 
+        str(getenv("OPENSEARCH_INDEX")), 
+        str(getenv("EMBEDDING_DIMENSIONS")), 
         embedding_field=config["opensearch"]["embedding_field"], 
-        text_field=config["opensearch"]["text_field"]
+        text_field=config["opensearch"]["text_field"],
+        http_auth=(str(getenv("OPENSEARCH_USERNAME")), str(getenv("OPENSEARCH_PASSWORD"))),
+        verify_certs=False,
+        use_ssl=True,
+        url_prefix="/os",
     )
 
     # initialize vector store
@@ -60,11 +64,15 @@ def get_opensearch_index(config):
 
     # OpensearchVectorClient encapsulates logic for a single opensearch index with vector search enabled
     client = OpensearchVectorClient(
-        getenv("OPENSEARCH_ENDPOINT", config["opensearch"]["endpoint"]), 
-        getenv("OPENSEARCH_INDEX", config["opensearch"]["index"]), 
-        config["opensearch"]["dim"], 
+        str(getenv("OPENSEARCH_HOST")), 
+        str(getenv("OPENSEARCH_INDEX")), 
+        str(getenv("EMBEDDING_DIMENSIONS")), 
         embedding_field=config["opensearch"]["embedding_field"], 
-        text_field=config["opensearch"]["text_field"]
+        text_field=config["opensearch"]["text_field"],
+        http_auth=(str(getenv("OPENSEARCH_USERNAME")), str(getenv("OPENSEARCH_PASSWORD"))),
+        verify_certs=False,
+        use_ssl=True,
+        url_prefix="/os",
     )
 
     # initialize vector store
@@ -157,11 +165,15 @@ def get_response(manual_query, example_query):
     query = manual_query if manual_query else example_query
 
     # setup llamaindex settings
-    Settings.embed_model = HuggingFaceEmbedding(model_name=config["llama_index"]["embedding_model"])
+    Settings.embed_model = OllamaEmbedding(
+        model_name=str(getenv("EMBEDDING_MODEL_NAME")),
+        base_url=str(getenv("OPENAI_API_BASE")),
+    )
     Settings.chunk_size = config["llama_index"]["chunk_size"]
-    Settings.llm = OpenAI(
-        model=config["llama_index"]["llm_model"],
-        temperature=config["llama_index"]["temperature"]
+    Settings.llm = Ollama(
+        model=str(getenv("LLM_MODEL_NAME")),
+        temperature=float(getenv("LLM_TEMPERATURE")),
+        base_url=str(getenv("OPENAI_API_BASE")),
     )
 
     index = get_opensearch_index(config)
