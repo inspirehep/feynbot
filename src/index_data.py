@@ -1,11 +1,16 @@
 from llama_index.core import Settings
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-
+from llama_index.embeddings.ollama import OllamaEmbedding
 from utils import load_config, create_opensearch_index
+from os import getenv
+
 
 if __name__ == "__main__":
     config = load_config("config.yaml")
-    Settings.embed_model = HuggingFaceEmbedding(model_name=config["llama_index"]["embedding_model"])
+    Settings.embed_model = OllamaEmbedding(
+        model_name=str(getenv("EMBEDDING_MODEL_NAME")),
+        base_url=str(getenv("OPENAI_API_BASE")),
+    )
+    
     Settings.chunk_size = config["llama_index"]["chunk_size"]
     
     try:
