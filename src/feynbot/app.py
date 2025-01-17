@@ -10,10 +10,10 @@ from llama_index.llms.ollama import Ollama
 
 from os import getenv
 from llama_index.core import (
-    VectorStoreIndex, 
-    SimpleDirectoryReader, 
-    StorageContext, 
-    Settings
+    VectorStoreIndex,
+    SimpleDirectoryReader,
+    StorageContext,
+    Settings,
 )
 from llama_index.core.query_engine import CitationQueryEngine
 from llama_index.embeddings.ollama import OllamaEmbedding
@@ -21,6 +21,7 @@ from llama_index.vector_stores.opensearch import (
     OpensearchVectorStore,
     OpensearchVectorClient,
 )
+
 
 def load_config(config_path):
     with open(os.path.join(os.getcwd(), config_path)) as stream:
@@ -30,6 +31,7 @@ def load_config(config_path):
             print(exc)
     return config
 
+
 def create_opensearch_index(config):
     print("Creating and populating OpenSearch index collection")
 
@@ -38,12 +40,15 @@ def create_opensearch_index(config):
 
     # OpensearchVectorClient encapsulates logic for a single opensearch index with vector search enabled
     client = OpensearchVectorClient(
-        str(getenv("OPENSEARCH_HOST")), 
-        str(getenv("OPENSEARCH_INDEX")), 
-        str(getenv("EMBEDDING_DIMENSIONS")), 
-        embedding_field=config["opensearch"]["embedding_field"], 
+        str(getenv("OPENSEARCH_HOST")),
+        str(getenv("OPENSEARCH_INDEX")),
+        str(getenv("EMBEDDING_DIMENSIONS")),
+        embedding_field=config["opensearch"]["embedding_field"],
         text_field=config["opensearch"]["text_field"],
-        http_auth=(str(getenv("OPENSEARCH_USERNAME")), str(getenv("OPENSEARCH_PASSWORD"))),
+        http_auth=(
+            str(getenv("OPENSEARCH_USERNAME")),
+            str(getenv("OPENSEARCH_PASSWORD")),
+        ),
         verify_certs=False,
         use_ssl=True,
         url_prefix="/os",
@@ -59,17 +64,21 @@ def create_opensearch_index(config):
     )
     return index
 
+
 def get_opensearch_index(config):
     print("Loading existing OpenSearch index collection")
 
     # OpensearchVectorClient encapsulates logic for a single opensearch index with vector search enabled
     client = OpensearchVectorClient(
-        str(getenv("OPENSEARCH_HOST")), 
-        str(getenv("OPENSEARCH_INDEX")), 
-        str(getenv("EMBEDDING_DIMENSIONS")), 
-        embedding_field=config["opensearch"]["embedding_field"], 
+        str(getenv("OPENSEARCH_HOST")),
+        str(getenv("OPENSEARCH_INDEX")),
+        str(getenv("EMBEDDING_DIMENSIONS")),
+        embedding_field=config["opensearch"]["embedding_field"],
         text_field=config["opensearch"]["text_field"],
-        http_auth=(str(getenv("OPENSEARCH_USERNAME")), str(getenv("OPENSEARCH_PASSWORD"))),
+        http_auth=(
+            str(getenv("OPENSEARCH_USERNAME")),
+            str(getenv("OPENSEARCH_PASSWORD")),
+        ),
         verify_certs=False,
         use_ssl=True,
         url_prefix="/os",
@@ -82,14 +91,13 @@ def get_opensearch_index(config):
     index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
     return index
 
-def postprocess_response(response):
 
+def postprocess_response(response):
     inspire_url = "https://inspirehep.net/literature?sort=mostrecent&size=25&page=1&q="
 
     references = {
-        i: os.path.splitext(node.metadata['file_name'])[0]
-        for i, node 
-        in enumerate(response.source_nodes)
+        i: os.path.splitext(node.metadata["file_name"])[0]
+        for i, node in enumerate(response.source_nodes)
     }
 
     # create a set to keep track of encountered files
@@ -114,46 +122,49 @@ def postprocess_response(response):
             new_index += 1
         else:
             # if encountered, update the index mapping
-            index_mapping[key] = min(index_mapping.get(k, float('inf')) for k, v in references.items() if v == reference)
+            index_mapping[key] = min(
+                index_mapping.get(k, float("inf"))
+                for k, v in references.items()
+                if v == reference
+            )
 
     response = response.response if not isinstance(response, str) else response
-    
-    print("-"*20)
+
+    print("-" * 20)
     print("BEFORE posprocessing")
     print("Index mapping:", index_mapping)
     print("References:", references)
     print("New References:", new_references)
     print("Response:", response)
-    print("-"*20)
+    print("-" * 20)
 
     # replace indices in the text according to the index_mapping
     for old_index, new_index in index_mapping.items():
-        response = response.replace(f"[{old_index+1}]", f"[{new_index}]")
+        response = response.replace(f"[{old_index + 1}]", f"[{new_index}]")
 
-    indices_in_text = set(map(int, re.findall(r'\[(\d+)\]', response)))
+    indices_in_text = set(map(int, re.findall(r"\[(\d+)\]", response)))
     # filter new_data to keep only items with indices appearing in the text
-    new_references_filtered = {index: file_name for index, file_name in new_references.items() if index in indices_in_text}
+    new_references_filtered = {
+        index: file_name
+        for index, file_name in new_references.items()
+        if index in indices_in_text
+    }
 
-    print("-"*20)
+    print("-" * 20)
     print("AFTER posprocessing")
     print("New References filtered:", new_references_filtered)
     print("Response:", response)
-    print("-"*20)
-    
+    print("-" * 20)
 
     # reference outputs as links in Markdown format
     md_references = "\n\n".join(
         [
-            f"[[{i}] {reference}]({''.join([inspire_url, reference])})" 
-            for i, reference 
-            in new_references_filtered.items()
+            f"[[{i}] {reference}]({''.join([inspire_url, reference])})"
+            for i, reference in new_references_filtered.items()
         ]
     )
 
-    postprocess_response = [
-        response, 
-        md_references
-    ]
+    postprocess_response = [response, md_references]
 
     return postprocess_response
 
@@ -181,7 +192,7 @@ def get_response(manual_query, example_query):
     query_engine = CitationQueryEngine.from_args(
         index,
         citation_chunk_size=1024,
-        similarity_top_k=config["llama_index"]["similarity_top_k"]
+        similarity_top_k=config["llama_index"]["similarity_top_k"],
     )
 
     response = query_engine.query(query)
