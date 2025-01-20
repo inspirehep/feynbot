@@ -27,7 +27,7 @@ if __name__ == "__main__":
             ),
         ],
         outputs=[gr.Textbox(label="Answer", lines=5), gr.Markdown(label="References")],
-        title="Feynbot",
+        title="Feynbot Base",
         description="Ask anything or pick an example question from the dropdown below.",
         allow_flagging=config["gradio"]["allow_flagging"],
         flagging_dir=config["gradio"]["flagging_dir"],
@@ -35,22 +35,28 @@ if __name__ == "__main__":
     )
 
     with gr.Blocks() as feynbot_ir:
-        gr.Markdown("<h1 style='text-align: center;'>Feynbot on INSPIRE HEP Search</h1>")
+        gr.Markdown("<h1 style='text-align: center;'>Feynbot IR on INSPIRE HEP Search</h1>")
         gr.Markdown("""Specialized academic search tool that combines traditional 
                     database searching with AI-powered query expansion and result 
                     synthesis, focused on physics research papers.""")
         with gr.Row():
             with gr.Column():
                 query = gr.Textbox(label="Search Query", placeholder="Ask Feynbot anything...", lines=3)
-                examples = gr.Examples([["Which one is closest star?"], ["In which particles does the Higgs Boson decay to?"]], query)
+                model = gr.Dropdown(
+                    choices=["llama3.2", "llama3.1:8b", "gemma2:27b", "mistral-small"],
+                    value="llama3.1:8b",
+                    label="Model (select or free-text)",
+                    allow_custom_value=True
+                )
+                examples = gr.Examples([["Which is the closest star?"], ["Which particles does the Higgs Boson decay into?"]], query)
                 search_btn = gr.Button("Search")
                 gr.HTML(FOOTER)
             with gr.Column():
                 results = gr.Markdown("Answer will appear here...", label="Search Results", )
-            search_btn.click(fn=search, inputs=query, outputs=results, api_name="search", show_progress=True)
+            search_btn.click(fn=search, inputs=[query, model], outputs=results, api_name="search", show_progress=True)
 
     demo = gr.TabbedInterface(
-        [feynbot, feynbot_ir], ["Feynbot", "Feynbot IR"], theme="citrus"
+        [feynbot_ir, feynbot], ["Feynbot IR", "Feynbot Base"], theme="citrus"
     )
 
     demo.launch(
