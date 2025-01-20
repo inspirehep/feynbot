@@ -68,7 +68,7 @@ def user_prompt(query, context):
     return prompt
 
 
-def llm_expand_query(query):
+def llm_expand_query(query, model="llama3.2"):
     """Expands a query to variations of fulltext searches"""
     prompt = f"""
     Expand this query into a the query format used for a fulltext search
@@ -96,7 +96,7 @@ def llm_expand_query(query):
     response = requests.post(
         f"{str(getenv('OPENAI_API_BASE'))}/api/generate",
         json={
-            "model": "llama3.2",
+            "model": model,
             "prompt": prompt,
             "stream": False,
             "options": {
@@ -111,7 +111,7 @@ def llm_expand_query(query):
     return response.json()["response"]
 
 
-def llm_generate_answer(prompt):
+def llm_generate_answer(prompt, model="llama3.2"):
     """Generate a response from the LLM"""
 
     system_desc = """You are part of a Retrieval Augmented Generation system
@@ -128,7 +128,7 @@ def llm_generate_answer(prompt):
     response = requests.post(
         f"{str(getenv('OPENAI_API_BASE'))}/api/generate",
         json={
-            "model": "llama3.2",
+            "model": model,
             "prompt": system_desc + "\n\n" + prompt,
             "stream": False,
             "options": {
@@ -173,16 +173,16 @@ def clean_refs(answer, results):
     return answer, new_results
 
 
-def search(query, progress=gr.Progress()):
+def search(query, model="llama3.2", progress=gr.Progress()):
     time.sleep(1)
     progress(0, desc="Expanding query...")
-    query = llm_expand_query(query)
+    query = llm_expand_query(query, model)
     progress(0.25, desc="Searching INSPIRE HEP...")
     results = search_inspire(query)
     progress(0.50, desc="Generating answer...")
     context = results_context(results)
     prompt = user_prompt(query, context)
-    answer = llm_generate_answer(prompt)
+    answer = llm_generate_answer(prompt, model)
     new_answer, references = clean_refs(answer, results)
     progress(1, desc="Done!")
 
