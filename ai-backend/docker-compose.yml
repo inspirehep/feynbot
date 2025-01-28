@@ -1,0 +1,12 @@
+name: INSPIRE-AI
+
+services:
+  backend:
+    build:
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/backend/app
+      - ./tests:/backend/tests
