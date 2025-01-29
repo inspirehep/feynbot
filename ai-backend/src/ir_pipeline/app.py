@@ -1,7 +1,9 @@
-import requests
-import time
 import re
 from os import getenv
+
+import requests
+
+from src.ir_pipeline.llm_response import LLMResponse
 
 
 def search_inspire(query, size=10):
@@ -122,7 +124,9 @@ def llm_generate_answer(prompt, model="llama3.2"):
               search result. End the answer with the query and a brief answer as
               summary of the previous discussed results. Do not consider results
               that are not related to the query and, if no specific answer can be
-              provided, assert that in the brief answer."""
+              provided, assert that in the brief answer. Please follow the provided schema
+              to correctly format the different parts of your answer.
+              """
 
     response = requests.post(
         f"{str(getenv('LLM_API_BASE'))}/api/generate",
@@ -137,9 +141,10 @@ def llm_generate_answer(prompt, model="llama3.2"):
                 "top_p": 1,
                 # "repeat_penalty": 0,
             },
+            "format": LLMResponse.model_json_schema(),
         },
     )
-    return response.json()["response"]
+    return LLMResponse.model_validate_json(response.json()["response"])
 
 
 def clean_refs(answer, results):
@@ -153,15 +158,11 @@ def clean_refs(answer, results):
             unique_ordered.append(ref_num)
 
     # Filter references
-    new_i = 1
-    new_results = ""
+    formatted_references = []
     for i, hit in enumerate(results["hits"]["hits"]):
         if i not in unique_ordered:
             continue
-        metadata = hit["metadata"]
-        new_results += f"**[{new_i}]** "
-        new_results += format_reference(metadata)
-        new_i += 1
+        formatted_references.append(format_reference(hit["metadata"]))
 
     new_i = 1
     for i in unique_ordered:
@@ -169,19 +170,22 @@ def clean_refs(answer, results):
         new_i += 1
     answer = answer.replace("__NEW_REF_ID_", "")
 
-    return answer, new_results
+    return answer, formatted_references
 
 
 def search(query, model="llama3.2"):
-    time.sleep(1)
     query = llm_expand_query(query, model)
     results = search_inspire(query)
     context = results_context(results)
     prompt = user_prompt(query, context)
     answer = llm_generate_answer(prompt, model)
-    new_answer, references = clean_refs(answer, results)
+    new_answer, references = clean_refs(answer.response, results)
 
-    # json_str = json.dumps(results['hits']['hits'][0]['metadata'], indent=4)
-    return (
-        "**Answer**:\n\n" + new_answer + "\n\n**References**:\n\n" + references
-    )  # + "\n\n <pre>\n" + json_str + "</pre>"
+    res = {
+        "brief": answer.brief,
+        "response": new_answer,
+        "references": references,
+        "expanded_query": query,
+    }
+
+    return res

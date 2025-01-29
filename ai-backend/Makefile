@@ -1,5 +1,5 @@
-run: 
+run:
 	docker compose up -d
 
-stop: 
+stop:
 	docker compose down
