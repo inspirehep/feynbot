@@ -2,14 +2,20 @@
 name = "backend"
 version = "0.1.0"
 description = ""
-authors = ["PascalEgn <pascal.egner@googlemail.com>"]
+authors = ["PascalEgn <pascal.egner@googlemail.com>", "miguelgrc <miguel.g@cern.ch>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
 fastapi = {extras = ["standard"], version = "^0.115.7"}
 llama-index = "^0.12.14"
+sqlalchemy = "^2.0.37"
+alembic = "^1.14.1"
+psycopg2-binary = "^2.9.10"
 
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^4.1.0"
 
 [build-system]
 requires = ["poetry-core"]

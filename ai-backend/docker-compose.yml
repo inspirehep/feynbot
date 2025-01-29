@@ -10,5 +10,5 @@ services:
     environment:
       - LLM_API_BASE=http://194.12.189.112:11434
     volumes:
-      - ./backend:/backend/app
-      - ./tests:/backend/tests
+      - ./src:/app/src
+      - ./tests:/app/tests

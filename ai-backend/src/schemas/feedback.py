@@ -1,8 +1,8 @@
-from pydantic import BaseModel
 from typing import Optional
+
+from pydantic import BaseModel
 
 
 class FeedbackRequest(BaseModel):
-    id: str
     rating: bool
     comment: Optional[str] = None
