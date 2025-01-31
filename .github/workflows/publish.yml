@@ -1,0 +1,33 @@
+name: Build and Publish
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract short commit SHA
+        id: get_short_sha
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Build and push
+        uses: cern-sis/gh-workflows/.github/actions/docker-build@latest
+        with:
+          dockerfile: ./ai-backend/Dockerfile
+          stage: prod
+          platforms: linux/amd64
+          cache: false
+          registry: registry.cern.ch
+          image: cern-sis/inspire/ai
+          tags: |
+            ${{ env.SHORT_SHA }}
+            latest
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+          build-args: |
+            BACKEND_VERSION=${{ env.SHORT_SHA }}

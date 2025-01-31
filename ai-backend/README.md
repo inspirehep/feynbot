@@ -10,6 +10,10 @@ make run
 
 This will start the application and map port 8000 on your localhost.
 
+### Environment variables
+
+Create a local `.env` file and add the necessary environment variables. See `configMapGenerator.ai-globals` in https://github.com/cern-sis/kubernetes-inspire/blob/main/ai/environments/qa/kustomization.yml and don't forget the secrets (e.g. db url)
+
 ## How to Stop the Application
 
 To stop the application, use the following command:
