@@ -1,14 +1,13 @@
 import time
+from os import getenv
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import UUID4
 from requests import Session
 
-from src.config import VALID_MODELS
 from src.database import get_db
 from src.ir_pipeline.app import search
-from src.models.feedback import Feedback
-from src.models.query_ir import QueryIr
+from src.models import Feedback, QueryIr
 from src.schemas.feedback import FeedbackRequest
 from src.schemas.query import QueryRequest
 
@@ -20,6 +19,7 @@ router = APIRouter(
 
 @router.post("/query")
 async def save_query(request: QueryRequest, db: Session = Depends(get_db)):
+    VALID_MODELS = getenv("VALID_MODELS").split(",")
     if request.model not in VALID_MODELS:
         raise HTTPException(
             status_code=400,
@@ -38,6 +38,8 @@ async def save_query(request: QueryRequest, db: Session = Depends(get_db)):
         references=query_response.get("references", []),
         expanded_query=query_response.get("expanded_query", ""),
         model=request.model,
+        backend_version=getenv("BACKEND_VERSION"),
+        matomo_client_id=request.matomo_client_id,
         user=request.user,
         response_time=response_time,
     )

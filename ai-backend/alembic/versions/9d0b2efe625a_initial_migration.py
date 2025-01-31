@@ -1,8 +1,8 @@
 """Initial migration
 
-Revision ID: 7d1c96449297
+Revision ID: 9d0b2efe625a
 Revises:
-Create Date: 2025-01-29 11:59:40.766696
+Create Date: 2025-01-31 15:48:38.305077
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "7d1c96449297"
+revision: str = "9d0b2efe625a"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -30,6 +30,7 @@ def upgrade() -> None:
         sa.Column("references", sa.ARRAY(sa.String()), nullable=False),
         sa.Column("expanded_query", sa.String(), nullable=False),
         sa.Column("model", sa.String(), nullable=False),
+        sa.Column("backend_version", sa.String(), nullable=True),
         sa.Column("matomo_client_id", sa.Uuid(), nullable=True),
         sa.Column("user", sa.String(), nullable=False),
         sa.Column(

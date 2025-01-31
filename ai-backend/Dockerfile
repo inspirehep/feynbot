@@ -16,3 +16,11 @@ ENV VIRTUAL_ENV=/app/.venv \
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 WORKDIR /app
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+
+FROM dev AS prod
+ARG BACKEND_VERSION
+ENV BACKEND_VERSION=${BACKEND_VERSION}
+ENV ROOT_PATH=/ai
+COPY src/ /app/src/
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
