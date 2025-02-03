@@ -24,7 +24,7 @@ class QueryIr(Base):
     model: Mapped[str] = mapped_column()
     backend_version: Mapped[Optional[str]] = mapped_column()
     matomo_client_id: Mapped[Optional[uuid.UUID]] = mapped_column()
-    user: Mapped[str] = mapped_column()
+    user: Mapped[Optional[str]] = mapped_column()
     timestamp: Mapped[datetime] = mapped_column(server_default=func.now())
     response_time: Mapped[float] = mapped_column()
 
