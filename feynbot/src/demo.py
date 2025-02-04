@@ -1,4 +1,5 @@
 import json
+from os import getenv
 
 import gradio as gr
 from feynbot_ir.app import search
@@ -51,18 +52,8 @@ if __name__ == "__main__":
                     label="Search Query", placeholder="Ask Feynbot anything...", lines=3
                 )
                 model = gr.Dropdown(
-                    choices=[
-                        "llama3.2",
-                        "llama3.1:8b",
-                        "gemma2:27b",
-                        "mistral-small",
-                        "llama3.2:3b-instruct-fp16",
-                        "llama3.1:8b-instruct-fp16",
-                        "gemma2:27b-instruct-q6_K",
-                        "mistral-small:24b-instruct-2501-q8_0",
-                        "mistral-small:24b-instruct-2501-q4_K_M",
-                    ],
-                    value="llama3.1:8b-instruct-fp16",
+                    choices=getenv("VALID_MODELS").split(","),
+                    value=getenv("DEFAULT_MODEL"),
                     label="Model (select or free-text)",
                     allow_custom_value=True,
                 )
