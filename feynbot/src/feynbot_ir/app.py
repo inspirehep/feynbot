@@ -176,9 +176,9 @@ def clean_refs(answer, results):
 def search(query, model="llama3.2", progress=gr.Progress()):
     time.sleep(1)
     progress(0, desc="Expanding query...")
-    query = llm_expand_query(query, model)
+    expanded_query = llm_expand_query(query, model)
     progress(0.25, desc="Searching INSPIRE HEP...")
-    results = search_inspire(query)
+    results = search_inspire(expanded_query)
     progress(0.50, desc="Generating answer...")
     context = results_context(results)
     prompt = user_prompt(query, context)
