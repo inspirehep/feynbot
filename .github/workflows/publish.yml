@@ -16,7 +16,7 @@ jobs:
         run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Build and push
-        uses: cern-sis/gh-workflows/.github/actions/docker-build@latest
+        uses: cern-sis/gh-workflows/.github/actions/docker-build@v6.3.1
         with:
           dockerfile: ./ai-backend/Dockerfile
           stage: prod
