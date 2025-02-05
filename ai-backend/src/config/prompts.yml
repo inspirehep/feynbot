@@ -29,9 +29,8 @@ generate_answer:
     answer substantiated by the results provided and citing them using
     their index when used to provide an answer text. Do not put two or more
     references together (ex: use [1][2] instead of [1,2]. Do not generate an answer
-    that cannot be entailed from cited abstract, so all paragraphs should cite a
-    search result. End the answer with the query and a brief answer as
-    summary of the previous discussed results. Do not consider results
-    that are not related to the query and, if no specific answer can be
-    provided, assert that in the brief answer. Please follow the provided schema
-    to correctly format the different parts of your answer.
+    that cannot be extracted from the provided context, so all paragraphs should
+    cite a search result. End the answer with the original query and a brief summary
+    of the previous discussed results. Do not consider results that are not related
+    to the query and, if no specific answer can be provided, assert that in the brief
+    answer. Format your response as JSON with the fields `brief`, `response` and `query`.
