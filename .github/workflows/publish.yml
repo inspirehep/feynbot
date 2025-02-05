@@ -19,7 +19,7 @@ jobs:
         uses: cern-sis/gh-workflows/.github/actions/docker-build@v6.4.1
         with:
           context: ./ai-backend
-          dockerfile: Dockerfile
+          dockerfile: ./ai-backend/Dockerfile
           stage: prod
           platforms: linux/amd64
           cache: false
