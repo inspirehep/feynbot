@@ -2,8 +2,26 @@ import re
 from os import getenv
 
 import requests
+import yaml
 
 from src.ir_pipeline.llm_response import LLMResponse
+
+
+def load_prompts():
+    """Note: this file will be overridden in kubernetes-inspire"""
+    with open("src/config/prompts.yml") as f:
+        return yaml.safe_load(f)
+
+
+PROMPTS = load_prompts()
+
+
+def get_prompt(prompts, prompt_type, model):
+    """Get prompt for specific model or fall back to default"""
+    model_specific = prompts.get(prompt_type, {}).get(model)
+    if model_specific:
+        return model_specific
+    return prompts.get(prompt_type, {}).get("default", "")
 
 
 def search_inspire(query, size=10):
@@ -69,30 +87,9 @@ def user_prompt(query, context):
     return prompt
 
 
-def llm_expand_query(query, model="llama3.2"):
+def llm_expand_query(query, model):
     """Expands a query to variations of fulltext searches"""
-    prompt = f"""
-    Expand this query into a the query format used for a fulltext search
-    over the INSPIRE HEP database. Propose alternatives of the query to
-    maximize the recall and join those variantes using OR operators and
-    prepend each variant with the ft prefix. Just provide the expanded
-    query, without explanations.
-
-    Example of query:
-    how far are black holes?
-
-    Expanded query:
-    ft "how far are black holes" OR ft "distance from black holes" OR ft
-    "distances to black holes" OR ft "measurement of distance to black
-    holes"  OR ft "remoteness of black holes"  OR ft "distance to black
-    holes"  OR ft "how far are singularities"  OR ft "distance to
-    singularities"  OR ft "distances to event horizon"  OR ft "distance
-    from Schwarzschild radius" OR ft "black hole distance"
-
-    Query: {query}
-
-    Expanded query:
-  """
+    prompt = get_prompt(PROMPTS, "expand_query", model).format(query=query)
 
     response = requests.post(
         f"{str(getenv('LLM_API_BASE'))}/api/generate",
@@ -112,21 +109,9 @@ def llm_expand_query(query, model="llama3.2"):
     return response.json()["response"]
 
 
-def llm_generate_answer(prompt, model="llama3.2"):
+def llm_generate_answer(prompt, model):
     """Generate a response from the LLM"""
-
-    system_desc = """You are part of a Retrieval Augmented Generation system
-              (RAG) and are asked with a query and a context of results. Generate an
-              answer substantiated by the results provided and citing them using
-              their index when used to provide an answer text. Do not put two or more
-              references together (ex: use [1][2] instead of [1,2]. Do not generate an answer
-              that cannot be entailed from cited abstract, so all paragraphs should cite a
-              search result. End the answer with the query and a brief answer as
-              summary of the previous discussed results. Do not consider results
-              that are not related to the query and, if no specific answer can be
-              provided, assert that in the brief answer. Please follow the provided schema
-              to correctly format the different parts of your answer.
-              """
+    system_desc = get_prompt(PROMPTS, "generate_answer", model)
 
     response = requests.post(
         f"{str(getenv('LLM_API_BASE'))}/api/generate",
