@@ -71,22 +71,21 @@ def user_prompt(query, context):
 def llm_expand_query(query, model="llama3.2"):
     """Expands a query to variations of fulltext searches"""
     prompt = f"""
-    Expand this query into a the query format used for a fulltext search
+    Expand this query into a the query format used for a search
     over the INSPIRE HEP database. Propose alternatives of the query to
-    maximize the recall and join those variantes using OR operators and
-    prepend each variant with the ft prefix. Just provide the expanded
-    query, without explanations.
+    maximize the recall and join those variantes using OR operators. 
+    Just provide the expanded query, without explanations.
 
     Example of query:
     how far are black holes?
 
     Expanded query:
-    ft "how far are black holes" OR ft "distance from black holes" OR ft
-    "distances to black holes" OR ft "measurement of distance to black
-    holes"  OR ft "remoteness of black holes"  OR ft "distance to black
-    holes"  OR ft "how far are singularities"  OR ft "distance to
-    singularities"  OR ft "distances to event horizon"  OR ft "distance
-    from Schwarzschild radius" OR ft "black hole distance"
+    "how far are black holes" OR "distance from black holes" OR
+    "distances to black holes" OR "measurement of distance to black
+    holes"  OR "remoteness of black holes" OR "distance to black
+    holes"  OR "how far are singularities" OR "distance to
+    singularities" OR "distances to event horizon" OR "distance
+    from Schwarzschild radius" OR "black hole distance"
 
     Query: {query}
 
@@ -118,9 +117,9 @@ def llm_generate_answer(prompt, model="llama3.2"):
               (RAG) and are asked with a query and a context of results. Generate an
               answer substantiated by the results provided and citing them using
               their index when used to provide an answer text. Do not put two or more
-              references together (ex: use [1][2] instead of [1,2]. Do not generate an answer
-              that cannot be entailed from cited abstract, so all paragraphs should cite a
-              search result. End the answer with the query and a brief answer as
+              references together (ex: use [1][2] instead of [1, 2] or [1][2][3] instead of [1, 2, 3]). 
+              Do not generate an answer that cannot be entailed from cited abstract, so all paragraphs 
+              should cite a search result. End the answer with the query and a brief answer as
               summary of the previous discussed results. Do not consider results
               that are not related to the query and, if no specific answer can be
               provided, assert that in the brief answer."""

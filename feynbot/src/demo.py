@@ -45,7 +45,8 @@ if __name__ == "__main__":
         )
         gr.Markdown("""Specialized academic search tool that combines traditional 
                     database searching with AI-powered query expansion and result 
-                    synthesis, focused on physics research papers.""")
+                    synthesis (from retrieved abstracts), focused on High Energy 
+                    Physics research papers.""")
         with gr.Row():
             with gr.Column():
                 query = gr.Textbox(
