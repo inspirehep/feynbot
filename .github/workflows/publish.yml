@@ -26,9 +26,8 @@ jobs:
           registry: registry.cern.ch
           image: cern-sis/inspire/ai
           tags: |
-            ${{ env.SHORT_SHA }}
             latest
           username: ${{ secrets.HARBOR_USERNAME }}
           password: ${{ secrets.HARBOR_PASSWORD }}
           build-args: |
-            BACKEND_VERSION=${{ env.SHORT_SHA }}
+            BACKEND_VERSION=sha-${{ env.SHORT_SHA }}

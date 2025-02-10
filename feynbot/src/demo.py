@@ -2,9 +2,13 @@ import json
 from os import getenv
 
 import gradio as gr
-from feynbot_ir.app import search
+from dotenv import load_dotenv
+from feynbot_ir.app import search as ir_search
+from feynbot_ir.app_fulltext import search as ir_ft_search
 
 from feynbot.app import get_response, load_config
+
+load_dotenv()
 
 if __name__ == "__main__":
     config = load_config("config.yaml")
@@ -73,15 +77,57 @@ if __name__ == "__main__":
                     label="Search Results",
                 )
             search_btn.click(
-                fn=search,
+                fn=ir_search,
                 inputs=[query, model],
                 outputs=results,
                 api_name="search",
                 show_progress=True,
             )
 
+    with gr.Blocks() as feynbot_fulltext:
+        gr.Markdown("<h1 style='text-align: center;'>Feynbot Fulltext Search</h1>")
+        gr.Markdown("""Search through the full text content of physics research papers 
+                    in the INSPIRE HEP database using AI-powered query expansion and 
+                    result synthesis.""")
+        with gr.Row():
+            with gr.Column():
+                query = gr.Textbox(
+                    label="Search Query",
+                    placeholder="Search through paper content...",
+                    lines=3,
+                )
+                model = gr.Dropdown(
+                    choices=getenv("VALID_MODELS").split(","),
+                    value=getenv("DEFAULT_MODEL"),
+                    label="Model (select or free-text)",
+                    allow_custom_value=True,
+                )
+                examples = gr.Examples(
+                    [
+                        ["What are the experimental signatures of dark matter?"],
+                        ["How is supersymmetry broken?"],
+                    ],
+                    query,
+                )
+                search_btn = gr.Button("Search")
+                gr.HTML(FOOTER)
+            with gr.Column():
+                results = gr.Markdown(
+                    "Results will appear here...",
+                    label="Search Results",
+                )
+            search_btn.click(
+                fn=ir_ft_search,
+                inputs=[query, model],
+                outputs=results,
+                api_name="fulltext_search",
+                show_progress=True,
+            )
+
     demo = gr.TabbedInterface(
-        [feynbot_ir, feynbot], ["Feynbot IR", "Feynbot Base"], theme="citrus"
+        [feynbot_ir, feynbot_fulltext, feynbot],
+        ["Feynbot IR", "Feynbot IR Fulltext", "Feynbot Base"],
+        theme="citrus",
     )
 
     demo.launch(
