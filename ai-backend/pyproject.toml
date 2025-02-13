@@ -8,11 +8,11 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 fastapi = {extras = ["standard"], version = "^0.115.7"}
-llama-index = "^0.12.14"
 sqlalchemy = "^2.0.37"
 alembic = "^1.14.1"
 psycopg2-binary = "^2.9.10"
 pyyaml = "^6.0.2"
+langchain = {extras = ["openai"], version = "^0.3.18"}
 
 
 [tool.poetry.group.dev.dependencies]

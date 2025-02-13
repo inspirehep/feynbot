@@ -34,3 +34,9 @@ generate_answer:
     of the previous discussed results. Do not consider results that are not related
     to the query and, if no specific answer can be provided, assert that in the brief
     answer. Format your response as JSON with the fields `brief`, `response` and `query`.
+
+    <QUERY>{query}</QUERY?
+
+    <CONTEXT>
+      {context}
+    </CONTEXT>
