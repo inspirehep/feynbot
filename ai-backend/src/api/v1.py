@@ -13,7 +13,7 @@ from pydantic import UUID4
 from requests import Session
 
 from src.database import get_db
-from src.ir_pipeline.app import search
+from src.ir_pipeline.orchestrator import search
 from src.models import Feedback, QueryIr
 from src.schemas.feedback import FeedbackRequest
 from src.schemas.query import QueryRequest
