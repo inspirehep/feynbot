@@ -56,7 +56,7 @@ async def save_query(request: QueryRequest, db: Session = Depends(get_db)):
         )
 
     start_time = time.time()
-    query_response = search(request.query, request.model)
+    query_response = search(request.query, request.model, use_highlights=True)
     response_time = time.time() - start_time
 
     query_ir = QueryIr(

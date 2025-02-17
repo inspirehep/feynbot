@@ -8,7 +8,7 @@ from src.ir_pipeline.chains import (
     create_query_expansion_chain,
 )
 from src.ir_pipeline.llm_response import LLMResponse
-from src.ir_pipeline.tools.inspire import InspireSearchTool
+from src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool, InspireSearchTool
 from src.ir_pipeline.utils.inspire_formatter import clean_refs, extract_context
 
 CHAIN_CACHE = {}
@@ -62,11 +62,16 @@ def initialize_chains(model):
     }
 
 
-def search(query, model):
+def search(query, model, use_highlights=False):
+    """Search INSPIRE HEP database with query expansion and answer generation"""
+
     if model not in CHAIN_CACHE:
         initialize_chains(model)
 
-    inspire_search_tool = InspireSearchTool()
+    if use_highlights:
+        inspire_search_tool = InspireOSFullTextSearchTool()
+    else:
+        inspire_search_tool = InspireSearchTool()
 
     expand_chain = CHAIN_CACHE[model]["expand_chain"]
     answer_chain = CHAIN_CACHE[model]["answer_chain"]
@@ -74,7 +79,7 @@ def search(query, model):
     expanded_query = expand_chain.invoke({"query": query})
     raw_results = inspire_search_tool.run(expanded_query)
 
-    context = extract_context(raw_results)
+    context = extract_context(raw_results, use_highlights=use_highlights)
 
     answer: LLMResponse = answer_chain.invoke({"query": query, "context": context})
 
