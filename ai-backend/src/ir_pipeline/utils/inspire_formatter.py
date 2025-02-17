@@ -2,12 +2,39 @@ import re
 from typing import Dict, List, Tuple
 
 
-def extract_context(results: Dict) -> str:
-    """Extracts context (title and abstract) from search results."""
-    context_items = [
-        f"Result [{i}]\n\nTitle: {hit['metadata'].get('titles', [{}])[0].get('title', 'N/A')}\n\nAbstract: {hit['metadata'].get('abstracts', [{}])[0].get('value', 'N/A')}\n\n"
-        for i, hit in enumerate(results["hits"]["hits"])
-    ]
+def extract_context(results: Dict, use_highlights: bool = False) -> str:
+    """
+    Extracts context from search results. If use_highlights is True,
+    include highlight snippets instead of abstracts.
+    """
+    if not use_highlights:
+        context_items = [
+            f"Result [{i}]\n\n"
+            f"Title: {hit['metadata'].get('titles', [{}])[0].get('title', 'N/A')}\n\n"
+            f"Abstract: {hit['metadata'].get('abstracts', [{}])[0].get('value', 'N/A')}\n\n"
+            for i, hit in enumerate(results["hits"]["hits"])
+        ]
+    else:
+        context_items = []
+        for i, hit in enumerate(results["hits"]["hits"]):
+            source = hit["_source"]
+            snippets = hit.get("highlight", {}).get("documents.attachment.content", [])
+            formatted_snippets = (
+                "".join(
+                    "Snippet "
+                    + chr(65 + s_index)
+                    + ": "
+                    + re.sub(r"\s+", " ", snippet)
+                    + "\n\n"
+                    for s_index, snippet in enumerate(snippets)
+                )
+                or "N/A\n\n"
+            )
+            context_items.append(
+                f"Result [{i}]\n\n"
+                f"Title: {source.get('titles', [{}])[0].get('title', 'N/A')}\n\n"
+                "Snippets:\n" + formatted_snippets
+            )
     return "\n".join(context_items)
 
 
