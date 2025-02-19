@@ -1,11 +1,12 @@
+from os import getenv
 from typing import Dict, Optional
 
 import requests
 from langchain_core.callbacks import CallbackManagerForToolRun
 from langchain_core.tools import BaseTool
-from pydantic import Field
-from os import getenv
 from opensearchpy import OpenSearch
+from pydantic import Field
+from src.ir_pipeline.schemas import Terms
 
 
 class InspireSearchTool(BaseTool):
@@ -17,10 +18,11 @@ class InspireSearchTool(BaseTool):
 
     def _run(
         self,
-        query: str,
+        terms: list[str],
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> Dict:
         """Executes the search and returns the raw JSON response."""
+        query = " OR ".join([f'ft "{term}"' for term in terms])
         base_url = "https://inspirehep.net/api/literature"
         params = {"q": query, "size": self.size, "format": "json"}
         response = requests.get(base_url, params=params)
@@ -29,6 +31,14 @@ class InspireSearchTool(BaseTool):
         if run_manager:
             run_manager.on_text(f"Returned {len(results['hits']['hits'])} results.")
         return results
+
+    def run(
+        self,
+        terms: Terms,
+        run_manager: Optional[CallbackManagerForToolRun] = None,
+    ) -> Dict:
+        """Override run to handle Terms parameter"""
+        return self._run(terms.terms, run_manager=run_manager)
 
 
 class InspireOSFullTextSearchTool(BaseTool):
@@ -82,13 +92,13 @@ class InspireOSFullTextSearchTool(BaseTool):
 
     def _run(
         self,
-        query: str,
+        terms: list[str],
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> Dict:
         """Executes the search and returns the raw JSON response."""
-        query_body = self.build_nested_bool_query(query)
+        query = self.build_nested_bool_query(terms)
         body = {
-            "query": query_body,
+            "query": query,
             "size": self.size,
             "highlight": {
                 "fields": {
@@ -111,3 +121,11 @@ class InspireOSFullTextSearchTool(BaseTool):
         if run_manager:
             run_manager.on_text(f"Returned {len(response['hits']['hits'])} results.")
         return response
+
+    def run(
+        self,
+        terms: Terms,
+        run_manager: Optional[CallbackManagerForToolRun] = None,
+    ) -> Dict:
+        """Override run to handle Terms parameter"""
+        return self._run(terms.terms, run_manager=run_manager)
