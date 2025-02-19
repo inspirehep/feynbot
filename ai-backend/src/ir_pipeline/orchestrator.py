@@ -7,7 +7,7 @@ from src.ir_pipeline.chains import (
     create_answer_generation_chain,
     create_query_expansion_chain,
 )
-from src.ir_pipeline.llm_response import LLMResponse
+from src.ir_pipeline.schemas import LLMResponse, Terms
 from src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool, InspireSearchTool
 from src.ir_pipeline.utils.inspire_formatter import clean_refs, extract_context
 
@@ -38,14 +38,13 @@ def initialize_chains(model):
         return
 
     llm = ChatOpenAI(
-        model="llama31",
+        model=model,
         base_url=f"{getenv('LLM_API_BASE')}/v1",
         default_headers=(
             {"Host": getenv("KUBEFLOW_HOST")} if getenv("KUBEFLOW_HOST") else {}
         ),
         api_key=getenv("LLM_API_KEY"),
         temperature=0,
-        max_tokens=30000,
         top_p=1,
     )
 
@@ -76,14 +75,16 @@ def search(query, model, use_highlights=False):
     expand_chain = CHAIN_CACHE[model]["expand_chain"]
     answer_chain = CHAIN_CACHE[model]["answer_chain"]
 
-    expanded_query = expand_chain.invoke({"query": query})
+    expanded_query: Terms = expand_chain.invoke({"query": query})
     raw_results = inspire_search_tool.run(expanded_query)
 
     context = extract_context(raw_results, use_highlights=use_highlights)
 
     answer: LLMResponse = answer_chain.invoke({"query": query, "context": context})
 
-    clean_response, references = clean_refs(answer.response, raw_results)
+    clean_response, references = clean_refs(
+        answer.response, raw_results, use_highlights=use_highlights
+    )
 
     return {
         "brief": answer.brief,

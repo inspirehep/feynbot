@@ -60,7 +60,9 @@ def format_reference(metadata: Dict) -> str:
     return output
 
 
-def clean_refs(answer: str, results: Dict) -> Tuple[str, List[str]]:
+def clean_refs(
+    answer: str, results: Dict, use_highlights: bool = False
+) -> Tuple[str, List[str]]:
     """Clean the references from the answer"""
 
     # Find references
@@ -75,7 +77,9 @@ def clean_refs(answer: str, results: Dict) -> Tuple[str, List[str]]:
     for i, hit in enumerate(results["hits"]["hits"]):
         if i not in unique_ordered:
             continue
-        formatted_references.append(format_reference(hit["metadata"]))
+        formatted_references.append(
+            format_reference(hit["_source" if use_highlights else "metadata"])
+        )
 
     new_i = 1
     for i in unique_ordered:

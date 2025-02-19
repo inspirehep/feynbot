@@ -46,15 +46,6 @@ def authenticate(credentials: Annotated[HTTPBasicCredentials, Depends(security)]
 
 @router.post("/query")
 async def save_query(request: QueryRequest, db: Session = Depends(get_db)):
-    VALID_MODELS = getenv("VALID_MODELS").split(",")
-    if request.model not in VALID_MODELS:
-        logger.error(f"Invalid model requested: {request.model}")
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid model name, available models are: "
-            + ", ".join(VALID_MODELS),
-        )
-
     start_time = time.time()
     query_response = search(request.query, request.model, use_highlights=True)
     response_time = time.time() - start_time
