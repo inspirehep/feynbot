@@ -90,5 +90,7 @@ def search(query, model, use_highlights=False):
         "brief": answer.brief,
         "response": clean_response,
         "references": references,
-        "expanded_query": expanded_query,
+        "expanded_query": " OR ".join(
+            [f'ft "{term}"' for term in expanded_query.terms]
+        ),
     }
