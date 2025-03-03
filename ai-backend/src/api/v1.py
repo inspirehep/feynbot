@@ -12,11 +12,14 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import UUID4
 from requests import Session
 
+from src.ir_pipeline.schemas import Terms
 from src.database import get_db
 from src.ir_pipeline.orchestrator import search
 from src.models import Feedback, QueryIr
 from src.schemas.feedback import FeedbackRequest
 from src.schemas.query import QueryRequest
+
+from src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool
 
 logger = logging.getLogger(__name__)
 
@@ -160,3 +163,15 @@ async def export_queries(
             "Content-Disposition": f"attachment; filename=queries_ir_{start_date.date()}_{end_date.date()}.csv"
         },
     )
+
+
+@router.post("/query-os")
+async def query_os(
+    terms: Terms,
+    size: int = 5,
+    _: str = Depends(authenticate),
+):
+    """Send the query to the OpenSearch endpoint and return its response with highlights."""
+    inspire_search_tool = InspireOSFullTextSearchTool(size=size)
+    raw_results = inspire_search_tool.run(terms)
+    return {"results": raw_results}
