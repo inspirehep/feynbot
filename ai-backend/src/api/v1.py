@@ -6,20 +6,19 @@ from io import StringIO
 from os import getenv
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import UUID4
 from requests import Session
 
-from src.ir_pipeline.schemas import Terms
-from src.database import get_db
+from src.database import SessionLocal, get_db
 from src.ir_pipeline.orchestrator import search
+from src.ir_pipeline.schemas import Terms
+from src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool
 from src.models import Feedback, QueryIr
 from src.schemas.feedback import FeedbackRequest
 from src.schemas.query import QueryRequest
-
-from src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool
 
 logger = logging.getLogger(__name__)
 
@@ -47,32 +46,48 @@ def authenticate(credentials: Annotated[HTTPBasicCredentials, Depends(security)]
     return credentials.username
 
 
-@router.post("/query")
-async def save_query(request: QueryRequest, db: Session = Depends(get_db)):
-    start_time = time.time()
-    query_response = search(request.query, request.model, use_highlights=True)
-    response_time = time.time() - start_time
-
-    query_ir = QueryIr(
-        query=request.query,
-        brief=query_response.get("brief", ""),
-        response=query_response.get("response", ""),
-        references=query_response.get("references", []),
-        expanded_query=query_response.get("expanded_query", ""),
-        model=request.model,
-        backend_version=getenv("BACKEND_VERSION"),
-        matomo_client_id=request.matomo_client_id,
-        user=request.user,
-        response_time=response_time,
-    )
-
+async def process_query_task(request: QueryRequest):
     try:
-        db.add(query_ir)
-        db.commit()
-        db.refresh(query_ir)
+        start_time = time.time()
+
+        query_response = await search(request.query, request.model, use_highlights=True)
+
+        response_time = time.time() - start_time
+
+        query_ir = QueryIr(
+            query=request.query,
+            brief=query_response.get("brief", ""),
+            response=query_response.get("response", ""),
+            references=query_response.get("references", []),
+            expanded_query=query_response.get("expanded_query", ""),
+            model=request.model,
+            backend_version=getenv("BACKEND_VERSION"),
+            matomo_client_id=request.matomo_client_id,
+            user=request.user,
+            response_time=response_time,
+        )
+
+        with SessionLocal() as db:
+            try:
+                db.add(query_ir)
+                db.commit()
+                db.refresh(query_ir)
+            except Exception as e:
+                logger.error(
+                    f"Database error when saving query_ir: {str(e)}", exc_info=True
+                )
+                db.rollback()
+
     except Exception as e:
-        logger.error(f"Database error when saving query_ir: {str(e)}", exc_info=True)
-        db.rollback()
+        logger.error(f"Error processing query: {str(e)}", exc_info=True)
+
+
+@router.post("/query")
+def save_query(
+    request: QueryRequest,
+    background_tasks: BackgroundTasks,
+):
+    background_tasks.add_task(process_query_task, request)
 
     return {}
 
