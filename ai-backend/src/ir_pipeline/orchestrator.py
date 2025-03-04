@@ -46,6 +46,7 @@ def initialize_chains(model):
         api_key=getenv("LLM_API_KEY"),
         temperature=0,
         top_p=1,
+        timeout=20,
     )
 
     expand_chain = create_query_expansion_chain(
@@ -61,7 +62,7 @@ def initialize_chains(model):
     }
 
 
-def search(query, model, use_highlights=False):
+async def search(query, model, use_highlights=False):
     """Search INSPIRE HEP database with query expansion and answer generation"""
 
     if model not in CHAIN_CACHE:
@@ -75,12 +76,14 @@ def search(query, model, use_highlights=False):
     expand_chain = CHAIN_CACHE[model]["expand_chain"]
     answer_chain = CHAIN_CACHE[model]["answer_chain"]
 
-    expanded_query: Terms = expand_chain.invoke({"query": query})
+    expanded_query: Terms = await expand_chain.ainvoke({"query": query})
     raw_results = inspire_search_tool.run(expanded_query)
 
     context = extract_context(raw_results, use_highlights=use_highlights)
 
-    answer: LLMResponse = answer_chain.invoke({"query": query, "context": context})
+    answer: LLMResponse = await answer_chain.ainvoke(
+        {"query": query, "context": context}
+    )
 
     clean_response, references = clean_refs(
         answer.response, raw_results, use_highlights=use_highlights
