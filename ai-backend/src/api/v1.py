@@ -16,9 +16,10 @@ from src.database import SessionLocal, get_db
 from src.ir_pipeline.orchestrator import search
 from src.ir_pipeline.schemas import Terms
 from src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool
-from src.models import Feedback, QueryIr
+from src.models import Feedback, QueryIr, SearchFeedback
 from src.schemas.feedback import FeedbackRequest
 from src.schemas.query import QueryRequest
+from src.schemas.search_feedback import SearchFeedbackRequest
 
 logger = logging.getLogger(__name__)
 
@@ -190,3 +191,32 @@ async def query_os(
     inspire_search_tool = InspireOSFullTextSearchTool(size=size)
     raw_results = inspire_search_tool.run(terms)
     return {"results": raw_results}
+
+
+@router.post("/search-feedback")
+async def create_search_feedback(
+    request: SearchFeedbackRequest,
+    db: Session = Depends(get_db),
+):
+    """Creates a new search feedback entry."""
+    feedback = SearchFeedback(
+        question=request.question,
+        additional=request.additional,
+        matomo_client_id=request.matomo_client_id,
+    )
+
+    try:
+        db.add(feedback)
+        db.commit()
+        db.refresh(feedback)
+    except Exception as e:
+        logger.error(
+            f"Database error when saving search feedback: {str(e)}", exc_info=True
+        )
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error when saving search feedback: {str(e)}",
+        )
+
+    return {}
