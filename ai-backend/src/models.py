@@ -2,7 +2,14 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import ARRAY, ForeignKey, Index, String, func
+from sqlalchemy import (
+    ARRAY,
+    ForeignKey,
+    Index,
+    String,
+    func,
+    text,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -13,7 +20,9 @@ class Base(DeclarativeBase):
 class QueryIr(Base):
     __tablename__ = "queries_ir"
 
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        primary_key=True, server_default=text("gen_random_uuid()")
+    )
     query: Mapped[str] = mapped_column()
     brief: Mapped[str] = mapped_column()
     response: Mapped[str] = mapped_column()
@@ -41,3 +50,15 @@ class Feedback(Base):
     comment: Mapped[Optional[str]] = mapped_column()
 
     __table_args__ = (Index("idx_feedback_rating", "rating"),)
+
+
+class SearchFeedback(Base):
+    __tablename__ = "search_feedback"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    question: Mapped[str] = mapped_column()
+    additional: Mapped[Optional[str]] = mapped_column()
+    matomo_client_id: Mapped[Optional[uuid.UUID]] = mapped_column()
+    timestamp: Mapped[datetime] = mapped_column(server_default=func.now())
