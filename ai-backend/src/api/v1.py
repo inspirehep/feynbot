@@ -220,3 +220,42 @@ async def create_search_feedback(
         )
 
     return {}
+
+
+@router.get("/export-search-feedback")
+async def export_feedback(
+    start_date: datetime,
+    end_date: datetime,
+    db: Session = Depends(get_db),
+    export_csv: bool = False,
+    _: str = Depends(authenticate),
+):
+    """Export search feedback within the specified date range. In CSV format if csv=True."""
+    feedbacks = (
+        db.query(SearchFeedback)
+        .filter(
+            SearchFeedback.timestamp >= start_date, SearchFeedback.timestamp <= end_date
+        )
+        .all()
+    )
+
+    if csv:
+        output = StringIO()
+        writer = csv.writer(output)
+
+        columns = [column.name for column in SearchFeedback.__table__.columns]
+        writer.writerow(columns)
+
+        for feedback in feedbacks:
+            writer.writerow([getattr(feedback, column) for column in columns])
+
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f"attachment; filename=search_feedback_{start_date.date()}_{end_date.date()}.csv"
+            },
+        )
+    else:
+        return feedbacks
