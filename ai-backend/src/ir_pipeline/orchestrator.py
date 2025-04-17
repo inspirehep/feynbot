@@ -2,6 +2,7 @@ from os import getenv
 
 import yaml
 from langchain_openai import ChatOpenAI
+from langfuse.callback import CallbackHandler
 
 from src.ir_pipeline.chains import (
     create_answer_generation_chain,
@@ -12,6 +13,12 @@ from src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool, InspireSe
 from src.ir_pipeline.utils.inspire_formatter import clean_refs, extract_context
 
 CHAIN_CACHE = {}
+
+langfuse_handler = CallbackHandler(
+    public_key=getenv("LANGFUSE_PUBLIC_KEY"),
+    secret_key=getenv("LANGFUSE_SECRET_KEY"),
+    host=getenv("LANGFUSE_HOST"),
+)
 
 
 def load_prompts():
@@ -76,13 +83,15 @@ async def search(query, model, use_highlights=False):
     expand_chain = CHAIN_CACHE[model]["expand_chain"]
     answer_chain = CHAIN_CACHE[model]["answer_chain"]
 
-    expanded_query: Terms = await expand_chain.ainvoke({"query": query})
+    expanded_query: Terms = await expand_chain.ainvoke(
+        {"query": query}, config={"callbacks": [langfuse_handler]}
+    )
     raw_results = inspire_search_tool.run(expanded_query)
 
     context = extract_context(raw_results, use_highlights=use_highlights)
 
     answer: LLMResponse = await answer_chain.ainvoke(
-        {"query": query, "context": context}
+        {"query": query, "context": context}, config={"callbacks": [langfuse_handler]}
     )
 
     clean_response, references = clean_refs(
