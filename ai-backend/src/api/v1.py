@@ -51,7 +51,12 @@ async def process_query_task(request: QueryRequest):
     try:
         start_time = time.time()
 
-        query_response = await search(request.query, request.model, use_highlights=True)
+        query_response = await search(
+            request.query,
+            request.model,
+            user=str(request.matomo_client_id),
+            use_highlights=True,
+        )
 
         response_time = time.time() - start_time
 
