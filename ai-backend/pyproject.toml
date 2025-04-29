@@ -13,7 +13,7 @@ sqlalchemy = "^2.0.37"
 alembic = "^1.14.1"
 psycopg2-binary = "^2.9.10"
 pyyaml = "^6.0.2"
-langchain = {extras = ["openai"], version = "^0.3.18"}
+langchain = {extras = ["community", "openai"], version = "^0.3.24"}
 opensearch-py = "^2.8.0"
 prometheus-fastapi-instrumentator = "^7.0.2"
 langfuse = "^2.60.2"

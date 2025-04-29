@@ -1,7 +1,7 @@
 import uuid
 from os import getenv
 
-from langchain_openai import ChatOpenAI
+from langchain_community.llms import VLLMOpenAI
 from langfuse.callback import CallbackHandler
 
 from src.ir_pipeline.chains import (
@@ -28,13 +28,13 @@ def initialize_chains(model):
     if model in CHAIN_CACHE:
         return
 
-    llm = ChatOpenAI(
-        model=model,
-        base_url=f"{getenv('LLM_API_BASE')}/v1",
+    llm = VLLMOpenAI(
+        model_name=model,
+        openai_api_base=f"{getenv('LLM_API_BASE')}/v1",
         default_headers=(
             {"Host": getenv("KUBEFLOW_HOST")} if getenv("KUBEFLOW_HOST") else {}
         ),
-        api_key=getenv("LLM_API_KEY"),
+        openai_api_key=getenv("LLM_API_KEY"),
         temperature=0,
         top_p=1,
         timeout=20,
