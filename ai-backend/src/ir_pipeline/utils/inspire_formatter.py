@@ -8,12 +8,13 @@ def extract_context(results: Dict, use_highlights: bool = False) -> str:
     include highlight snippets instead of abstracts.
     """
     if not use_highlights:
-        context_items = [
-            f"Result [{i}]\n\n"
-            f"Title: {hit['metadata'].get('titles', [{}])[0].get('title', 'N/A')}\n\n"
-            f"Abstract: {hit['metadata'].get('abstracts', [{}])[0].get('value', 'N/A')}\n\n"
-            for i, hit in enumerate(results["hits"]["hits"])
-        ]
+        context_items = []
+        for i, hit in enumerate(results["hits"]["hits"]):
+            title = hit["metadata"].get("titles", [{}])[0].get("title", "N/A")
+            abstract = hit["metadata"].get("abstracts", [{}])[0].get("value", "N/A")
+            context_items.append(
+                f"Result [{i}]\n\nTitle: {title}\n\nAbstract: {abstract}\n\n"
+            )
     else:
         context_items = []
         for i, hit in enumerate(results["hits"]["hits"]):

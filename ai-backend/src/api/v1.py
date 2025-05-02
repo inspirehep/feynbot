@@ -139,7 +139,7 @@ async def upsert_feedback(
         db.rollback()
         raise HTTPException(
             status_code=500, detail=f"Database error when saving feedback: {str(e)}"
-        )
+        ) from e
 
     return feedback
 
@@ -181,7 +181,10 @@ async def export_queries(
         iter([output.getvalue()]),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f"attachment; filename=queries_ir_{start_date.date()}_{end_date.date()}.csv"
+            "Content-Disposition": (
+                f"attachment; filename=queries_ir_"
+                f"{start_date.date()}_{end_date.date()}.csv"
+            )
         },
     )
 
@@ -192,7 +195,7 @@ async def query_os(
     size: int = 5,
     _: str = Depends(authenticate),
 ):
-    """Send the query to the OpenSearch endpoint and return its response with highlights."""
+    """Send query to OpenSearch endpoint and return its response with highlights."""
     inspire_search_tool = InspireOSFullTextSearchTool(size=size)
     raw_results = inspire_search_tool.run(terms)
     return {"results": raw_results}
@@ -222,7 +225,7 @@ async def create_search_feedback(
         raise HTTPException(
             status_code=500,
             detail=f"Database error when saving search feedback: {str(e)}",
-        )
+        ) from e
 
     return {}
 
@@ -235,7 +238,7 @@ async def export_feedback(
     export_csv: bool = False,
     _: str = Depends(authenticate),
 ):
-    """Export search feedback within the specified date range. In CSV format if csv=True."""
+    """Export search feedback within date range. In CSV format if csv=True."""
     feedbacks = (
         db.query(SearchFeedback)
         .filter(
@@ -259,7 +262,10 @@ async def export_feedback(
             iter([output.getvalue()]),
             media_type="text/csv",
             headers={
-                "Content-Disposition": f"attachment; filename=search_feedback_{start_date.date()}_{end_date.date()}.csv"
+                "Content-Disposition": (
+                    f"attachment; filename=search_feedback_"
+                    f"{start_date.date()}_{end_date.date()}.csv"
+                )
             },
         )
     else:
