@@ -12,10 +12,19 @@ jobs:
   linter:
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: playground
+        run: bun install
 
       - name: Pre-commit check
         uses: pre-commit/action@v3.0.1
