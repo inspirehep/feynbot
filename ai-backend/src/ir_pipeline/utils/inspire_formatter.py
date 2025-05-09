@@ -95,8 +95,8 @@ def clean_refs_with_snippets(
     answer: str,
     results: Dict,
 ) -> Tuple[str, List[str]]:
-    """Returns an object with [paper:snippet] references as keys and paperId, snippet and display
-    (citation numbers to display starting from 1) as values"""
+    """Returns an object with [paper:snippet] references as keys and paperId, snippet
+    and display (citation numbers to display starting from 1) as values"""
     count = 1
     paper_order = {}
 
@@ -113,11 +113,11 @@ def clean_refs_with_snippets(
 
         hit = results["hits"]["hits"][paper]
 
+        snippets = hit.get("highlight", {}).get("documents.attachment.content", [])
+
         citations[full_match] = {
             "paperId": hit["_source"]["control_number"],
-            "snippet": hit.get("highlight", {}).get("documents.attachment.content", [])[
-                snippet
-            ],
+            "snippet": snippets[snippet] if len(snippets) > snippet else "",
             "display": paper_order[paper],
         }
 
