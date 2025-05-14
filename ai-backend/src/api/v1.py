@@ -13,7 +13,7 @@ from pydantic import UUID4
 from requests import Session
 
 from src.database import SessionLocal, get_db
-from src.ir_pipeline.orchestrator import search
+from src.ir_pipeline.orchestrator import search, search_playground
 from src.ir_pipeline.schemas import Terms
 from src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool
 from src.models import Feedback, QueryIr, SearchFeedback
@@ -89,13 +89,20 @@ async def process_query_task(request: QueryRequest):
 
 
 @router.post("/query")
-def save_query(
+async def save_query(
     request: QueryRequest,
     background_tasks: BackgroundTasks,
 ):
     background_tasks.add_task(process_query_task, request)
 
     return {}
+
+
+@router.post("/query-playground")
+async def playground_query(request: QueryRequest):
+    """Returns responses in a format suitable for the playground."""
+    response = await search_playground(request.query, request.model)
+    return response
 
 
 @router.get("/query/{query_id}")
