@@ -10,7 +10,11 @@ from src.ir_pipeline.chains import (
 )
 from src.ir_pipeline.schemas import LLMResponse, Terms
 from src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool, InspireSearchTool
-from src.ir_pipeline.utils.inspire_formatter import clean_refs, extract_context
+from src.ir_pipeline.utils.inspire_formatter import (
+    clean_refs,
+    clean_refs_with_snippets,
+    extract_context,
+)
 
 LANGFUSE_HANDLER = CallbackHandler(
     public_key=getenv("LANGFUSE_PUBLIC_KEY"),
@@ -42,13 +46,23 @@ def initialize_chains(model):
 
     CHAIN_CACHE[model] = {
         "expand_chain": create_query_expansion_chain(llm=llm),
-        "answer_chain": create_answer_generation_chain(llm=llm),
+        "answer_chain": create_answer_generation_chain(
+            llm=llm, prompt_name="generate-answer"
+        ),
+        "answer_chain_playground": create_answer_generation_chain(
+            llm=llm, prompt_name="generate-answer-playground"
+        ),
     }
 
 
-async def search(query: str, model: str, user: str, use_highlights: bool = False):
+async def search_common(
+    query: str,
+    model: str,
+    user: str = None,
+    use_highlights: bool = False,
+    is_playground: bool = False,
+):
     """Search INSPIRE HEP database with query expansion and answer generation"""
-
     if model not in CHAIN_CACHE:
         initialize_chains(model)
 
@@ -61,12 +75,16 @@ async def search(query: str, model: str, user: str, use_highlights: bool = False
         "callbacks": [LANGFUSE_HANDLER],
         "metadata": {
             "langfuse_session_id": str(uuid.uuid4()),
-            "langfuse_user_id": user,
+            **({"langfuse_user_id": user} if user else {}),
         },
     }
 
     expand_chain = CHAIN_CACHE[model]["expand_chain"]
-    answer_chain = CHAIN_CACHE[model]["answer_chain"]
+    answer_chain = (
+        CHAIN_CACHE[model]["answer_chain_playground"]
+        if is_playground
+        else CHAIN_CACHE[model]["answer_chain"]
+    )
 
     expanded_query: Terms = await expand_chain.ainvoke({"query": query}, config=config)
     raw_results = inspire_search_tool.run(expanded_query)
@@ -75,6 +93,14 @@ async def search(query: str, model: str, user: str, use_highlights: bool = False
 
     answer: LLMResponse = await answer_chain.ainvoke(
         {"query": query, "context": context}, config=config
+    )
+
+    return answer, raw_results, expanded_query
+
+
+async def search(query, model, user, use_highlights=False):
+    answer, raw_results, expanded_query = await search_common(
+        query, model, user, use_highlights=use_highlights
     )
 
     clean_response, references = clean_refs(
@@ -88,4 +114,18 @@ async def search(query: str, model: str, user: str, use_highlights: bool = False
         "expanded_query": " OR ".join(
             [f'ft "{term}"' for term in expanded_query.terms]
         ),
+    }
+
+
+async def search_playground(query, model):
+    answer, raw_results, _ = await search_common(
+        query, model, use_highlights=True, is_playground=True
+    )
+
+    clean_response, citations = clean_refs_with_snippets(answer.response, raw_results)
+
+    return {
+        "brief": answer.brief,
+        "response": clean_response,
+        "citations": citations,
     }

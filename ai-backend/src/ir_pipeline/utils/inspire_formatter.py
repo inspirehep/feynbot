@@ -22,9 +22,9 @@ def extract_context(results: Dict, use_highlights: bool = False) -> str:
             formatted_snippets = (
                 "".join(
                     "Snippet "
-                    + chr(65 + s_index)
+                    + f"[{s_index}]"
                     + ": "
-                    + re.sub(r"\s+", " ", snippet)
+                    + re.sub(r"\s+|</?em>", " ", snippet)
                     + "\n\n"
                     for s_index, snippet in enumerate(snippets)
                 )
@@ -88,3 +88,36 @@ def clean_refs(
     answer = answer.replace("__NEW_REF_ID_", "")
 
     return answer, formatted_references
+
+
+def clean_refs_with_snippets(
+    answer: str,
+    results: Dict,
+) -> Tuple[str, List[str]]:
+    """Returns an object with [paper:snippet] references as keys and paperId, snippet and display
+    (citation numbers to display starting from 1) as values"""
+    count = 1
+    paper_order = {}
+
+    citations = {}
+
+    for match in re.finditer(r"\[(\d+):(\d+)\]", answer):
+        full_match = match.group(0)
+        paper = int(match.group(1))
+        snippet = int(match.group(2))
+
+        if paper not in paper_order:
+            paper_order[paper] = count
+            count += 1
+
+        hit = results["hits"]["hits"][paper]
+
+        citations[full_match] = {
+            "paperId": hit["_source"]["control_number"],
+            "snippet": hit.get("highlight", {}).get("documents.attachment.content", [])[
+                snippet
+            ],
+            "display": paper_order[paper],
+        }
+
+    return answer, citations
