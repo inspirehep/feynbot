@@ -26,7 +26,8 @@ def _get_prompt(prompt_name: str):
         langfuse_prompt = fetch_prompt(label=langfuse.environment)
     except NotFoundError:
         logger.warning(
-            f"Prompt '{prompt_name}' or label '{langfuse.environment}' not found in Langfuse, trying label 'production'"
+            f"Prompt '{prompt_name}' or label '{langfuse.environment}' "
+            f"not found in Langfuse, trying label 'production'"
         )
         langfuse_prompt = fetch_prompt()
 
