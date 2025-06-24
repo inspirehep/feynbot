@@ -1,13 +1,12 @@
 import logging
 
+from backend.src.ir_pipeline.schemas import LLMResponse, Terms
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableConfig
 from langfuse import Langfuse
 from langfuse.api.resources.commons.errors.not_found_error import NotFoundError
-
-from src.ir_pipeline.schemas import LLMResponse, Terms
 
 logger = logging.getLogger(__name__)
 
