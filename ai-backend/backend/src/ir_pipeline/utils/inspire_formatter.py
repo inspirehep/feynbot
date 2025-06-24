@@ -114,11 +114,11 @@ def clean_refs_with_snippets(
 
         hit = results["hits"]["hits"][paper]
 
+        snippets = hit.get("highlight", {}).get("documents.attachment.content", [])
+
         citations[full_match] = {
             "paperId": hit["_source"]["control_number"],
-            "snippet": hit.get("highlight", {}).get("documents.attachment.content", [])[
-                snippet
-            ],
+            "snippet": snippets[snippet] if len(snippets) > snippet else "",
             "display": paper_order[paper],
         }
 
