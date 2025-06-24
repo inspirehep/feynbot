@@ -6,20 +6,19 @@ from io import StringIO
 from os import getenv
 from typing import Annotated
 
+from backend.src.database import SessionLocal, get_db
+from backend.src.ir_pipeline.orchestrator import search, search_playground
+from backend.src.ir_pipeline.schemas import Terms
+from backend.src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool
+from backend.src.models import Feedback, QueryIr, SearchFeedback
+from backend.src.schemas.feedback import FeedbackRequest
+from backend.src.schemas.query import QueryRequest
+from backend.src.schemas.search_feedback import SearchFeedbackRequest
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import UUID4
 from requests import Session
-
-from src.database import SessionLocal, get_db
-from src.ir_pipeline.orchestrator import search, search_playground
-from src.ir_pipeline.schemas import Terms
-from src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool
-from src.models import Feedback, QueryIr, SearchFeedback
-from src.schemas.feedback import FeedbackRequest
-from src.schemas.query import QueryRequest
-from src.schemas.search_feedback import SearchFeedbackRequest
 
 logger = logging.getLogger(__name__)
 

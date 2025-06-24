@@ -1,20 +1,22 @@
 import uuid
 from os import getenv
 
-from langchain_community.llms import VLLMOpenAI
-from langfuse.callback import CallbackHandler
-
-from src.ir_pipeline.chains import (
+from backend.src.ir_pipeline.chains import (
     create_answer_generation_chain,
     create_query_expansion_chain,
 )
-from src.ir_pipeline.schemas import LLMResponse, Terms
-from src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool, InspireSearchTool
-from src.ir_pipeline.utils.inspire_formatter import (
+from backend.src.ir_pipeline.schemas import LLMResponse, Terms
+from backend.src.ir_pipeline.tools.inspire import (
+    InspireOSFullTextSearchTool,
+    InspireSearchTool,
+)
+from backend.src.ir_pipeline.utils.inspire_formatter import (
     clean_refs,
     clean_refs_with_snippets,
     extract_context,
 )
+from langchain_community.llms import VLLMOpenAI
+from langfuse.callback import CallbackHandler
 
 LANGFUSE_HANDLER = CallbackHandler(
     public_key=getenv("LANGFUSE_PUBLIC_KEY"),
@@ -34,11 +36,11 @@ def initialize_chains(model):
 
     llm = VLLMOpenAI(
         model_name=model,
-        openai_api_base=f"{getenv('LLM_API_BASE')}/v1",
+        openai_api_base=f"{getenv('API_BASE')}/v1",
         default_headers=(
-            {"Host": getenv("KUBEFLOW_HOST")} if getenv("KUBEFLOW_HOST") else {}
+            {"Host": getenv("KUBEFLOW_LLM_HOST")} if getenv("KUBEFLOW_LLM_HOST") else {}
         ),
-        openai_api_key=getenv("LLM_API_KEY"),
+        openai_api_key=getenv("KUBEFLOW_API_KEY"),
         temperature=0,
         top_p=1,
         timeout=20,
