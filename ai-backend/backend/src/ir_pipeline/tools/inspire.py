@@ -2,7 +2,7 @@ from os import getenv
 from typing import Dict, Optional
 
 import requests
-from backend.src.ir_pipeline.schemas import Terms
+from backend.src.ir_pipeline.schema import Terms
 from langchain_core.callbacks import CallbackManagerForToolRun
 from langchain_core.tools import BaseTool
 from opensearchpy import OpenSearch

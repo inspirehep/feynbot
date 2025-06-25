@@ -5,7 +5,7 @@ from backend.src.ir_pipeline.chains import (
     create_answer_generation_chain,
     create_query_expansion_chain,
 )
-from backend.src.ir_pipeline.schemas import LLMResponse, Terms
+from backend.src.ir_pipeline.schema import LLMResponse, Terms
 from backend.src.ir_pipeline.tools.inspire import (
     InspireOSFullTextSearchTool,
     InspireSearchTool,

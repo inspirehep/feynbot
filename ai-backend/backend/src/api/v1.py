@@ -8,9 +8,11 @@ from typing import Annotated
 
 from backend.src.database import SessionLocal, get_db
 from backend.src.ir_pipeline.orchestrator import search, search_playground
-from backend.src.ir_pipeline.schemas import Terms
+from backend.src.ir_pipeline.schema import Terms
 from backend.src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool
 from backend.src.models import Feedback, QueryIr, SearchFeedback
+from backend.src.rag_pipeline.rag_pipeline import search_rag
+from backend.src.rag_pipeline.schemas import QueryResponse
 from backend.src.schemas.feedback import FeedbackRequest
 from backend.src.schemas.query import QueryRequest
 from backend.src.schemas.search_feedback import SearchFeedbackRequest
@@ -20,7 +22,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import UUID4
 from requests import Session
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn")
 
 security = HTTPBasic()
 
@@ -276,3 +278,18 @@ async def export_feedback(
         )
     else:
         return feedbacks
+
+
+@router.post("/query-rag", response_model=QueryResponse)
+async def query_rag(request: QueryRequest):
+    """
+    Process a query using the RAG pipeline and return the response with citations.
+    """
+    try:
+        logger.info("[query_rag] Received RAG query: %s", request.query)
+        return search_rag(request.query, request.model)
+    except Exception as e:
+        logger.error(f"Error processing RAG query: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Error processing RAG query: {str(e)}"
+        ) from e
