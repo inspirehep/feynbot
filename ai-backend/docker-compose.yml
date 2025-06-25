@@ -10,5 +10,5 @@ services:
     env_file:
       - .env
     volumes:
-      - ./src:/app/src
+      - ./backend/src:/app/backend/src
       - ./tests:/app/tests

@@ -1,12 +1,12 @@
 import logging
 
-from backend.src.ir_pipeline.schemas import LLMResponse, Terms
+from backend.src.ir_pipeline.schema import LLMResponse, Terms
 from backend.src.utils.langfuse import get_prompt
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn")
 
 
 def create_query_expansion_chain(llm: BaseLanguageModel):

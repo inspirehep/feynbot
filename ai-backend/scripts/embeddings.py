@@ -27,7 +27,7 @@ def get_control_number_range(es_client, os_query, index):
 def worker_process(
     worker_id, cn_start, cn_end, reprocess, indexed_control_numbers, os_query
 ):
-    from backend.src.ir_pipeline.utils.embeddings import VLLMOpenAIEmbeddings
+    from backend.src.utils.embeddings import VLLMOpenAIEmbeddings
     from langchain_text_splitters import RecursiveCharacterTextSplitter
     from utils import (
         get_inspire_os_client,
@@ -104,7 +104,7 @@ def worker_process(
 def main():
     import argparse
 
-    from backend.src.ir_pipeline.utils.embeddings import VLLMOpenAIEmbeddings
+    from backend.src.utils.embeddings import VLLMOpenAIEmbeddings
     from utils import (
         get_indexed_control_numbers,
         get_inspire_os_client,
