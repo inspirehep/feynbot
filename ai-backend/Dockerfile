@@ -6,7 +6,7 @@ ENV POETRY_NO_INTERACTION=1 \
     POETRY_CACHE_DIR=/tmp/poetry_cache
 WORKDIR /app
 COPY pyproject.toml poetry.lock ./
-RUN poetry install --no-root && rm -rf $POETRY_CACHE_DIR
+RUN poetry install && rm -rf $POETRY_CACHE_DIR
 
 
 FROM python:3.11-slim AS dev
@@ -22,5 +22,5 @@ FROM dev AS prod
 ARG BACKEND_VERSION
 ENV BACKEND_VERSION=${BACKEND_VERSION}
 ENV ROOT_PATH=/ai
-COPY src/ /app/src/
+COPY backend/src/ /app/backend/src/
 CMD ["uvicorn", "backend.src.main:app", "--host", "0.0.0.0", "--port", "8000"]

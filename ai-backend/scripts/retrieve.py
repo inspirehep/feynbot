@@ -1,9 +1,9 @@
 import time
 from os import getenv
 
-from backend.src.ir_pipeline.utils.embeddings import VLLMOpenAIEmbeddings
-from backend.src.ir_pipeline.utils.reranker import CustomJinaRerank
+from backend.src.utils.embeddings import VLLMOpenAIEmbeddings
 from backend.src.utils.langfuse import get_prompt
+from backend.src.utils.reranker import CustomJinaRerank
 from dotenv import load_dotenv
 from langchain_community.llms import VLLMOpenAI
 from langchain_community.vectorstores import OpenSearchVectorSearch
@@ -76,7 +76,7 @@ llm = VLLMOpenAI(
 )
 
 vector_store = OpenSearchVectorSearch(
-    index_name="embeddings_nucl-ex",
+    index_name=getenv("VECTOR_DB_INDEX"),
     embedding_function=embeddings,
     opensearch_url=getenv("VECTOR_DB_HOST"),
     http_auth=(
@@ -87,6 +87,7 @@ vector_store = OpenSearchVectorSearch(
     verify_certs=False,
     ssl_show_warn=False,
     url_prefix="/os",
+    timeout=30,
 )
 
 search_filter = [
@@ -106,12 +107,13 @@ Whats being discussed in the Collider constraints?
 """
 
 prompt_template, _ = get_prompt("rag-query")
+start_embedding = time.time()
+embedding = embeddings.embed_query(search_query)
+end_embedding = time.time()
+
 
 start_retrieval = time.time()
-docs = vector_store.similarity_search(
-    query=search_query,
-    k=25,
-)
+docs = vector_store.similarity_search_by_vector(embedding=embedding, k=25)
 end_retrieval = time.time()
 
 start_reranking = time.time()
@@ -133,7 +135,7 @@ print(response)
 print("The response is based on the following documents:")
 pretty_print_sources(reranked_docs)
 
-
+print("Embedding time: ", end_embedding - start_embedding)
 print("Retrieval time: ", end_retrieval - start_retrieval)
 print("Reranking time: ", end_reranking - start_reranking)
 print("LLM time: ", end_llm - start_llm)
