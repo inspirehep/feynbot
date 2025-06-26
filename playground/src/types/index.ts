@@ -1,14 +1,14 @@
 import { convertInspirePaperToAppFormat } from "@/lib/api";
 
 export type LLMCitation = {
-  paperId: number;
+  doc_id: number;
+  control_number: number;
   snippet: string;
-  display: number;
 };
 
 export type LLMResponse = {
-  brief: string;
-  response: string;
+  brief_answer: string;
+  long_answer: string;
   citations: Record<string, LLMCitation>;
 };
 

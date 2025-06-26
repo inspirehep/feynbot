@@ -38,7 +38,7 @@ const PrimaryView = () => {
 
     try {
       const llmResponse: LLMResponse = await fetch(
-        `http://inspirehep.net/ai/v1/query-playground`,
+        `https://inspirehep.net/ai/v1/query-rag`,
         {
           method: "POST",
           headers: {
@@ -58,30 +58,30 @@ const PrimaryView = () => {
       const allPromises: Promise<FormattedCitation | null>[] = [];
 
       for (const citation of Object.values(llmResponse.citations)) {
-        const { paperId, display, snippet } = citation;
+        const { doc_id, control_number, snippet } = citation;
 
-        if (paperCache[paperId]) {
+        if (paperCache[control_number]) {
           // If paper is in cache, add the new snippet to its snippets array
-          paperCache[paperId].snippets.push(snippet);
+          paperCache[control_number].snippets.push(snippet);
         } else {
           // If paper is not in cache, fetch it and it to cache with the paper data and snippet
-          paperCache[paperId] = {
+          paperCache[control_number] = {
             paper: {} as PaperDetails,
             snippets: [snippet],
           };
-          const fetchPaperPromise = getPaperById(paperId.toString())
+          const fetchPaperPromise = getPaperById(control_number.toString())
             .then((paper) => {
-              const appPaper = convertInspirePaperToAppFormat(paper);
-              paperCache[paperId].paper = appPaper;
+              const appPaper = convertInspirePaperToAppFormat(paper, snippet);
+              paperCache[control_number].paper = appPaper;
               return {
-                id: paperId,
-                display,
+                id: control_number,
+                display: doc_id,
                 paper: appPaper,
-                snippets: paperCache[paperId].snippets,
+                snippets: paperCache[control_number].snippets,
               } as FormattedCitation;
             })
             .catch((error) => {
-              toast.error(`Failed to fetch paper ${paperId}:`, error);
+              toast.error(`Failed to fetch paper ${control_number}:`, error);
               return null;
             });
           allPromises.push(fetchPaperPromise);
@@ -155,10 +155,14 @@ const PrimaryView = () => {
                   <PDFViewer
                     pdfUrl={
                       activePaper.arxiv_id
-                        ? `https://export.arxiv.org/pdf/${activePaper.arxiv_id}.pdf`
+                        ? `https://browse-export.arxiv.org/pdf/${activePaper.arxiv_id}`
                         : ""
                     }
-                    // highlight={activePaper.snippets[0]} // TODO: Modify PDFViewer/PDFSearch to accept direct hightlights (without the need for user to search)
+                    highlight={
+                      activePaper.highlight
+                        ? activePaper.highlight.slice(0, 15)
+                        : ""
+                    }
                   />
                 </div>
               </div>

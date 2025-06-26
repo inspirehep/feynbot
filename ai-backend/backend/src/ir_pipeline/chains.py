@@ -6,7 +6,7 @@ from langchain_core.language_models import BaseLanguageModel
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig
 
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger(__name__)
 
 
 def create_query_expansion_chain(llm: BaseLanguageModel):

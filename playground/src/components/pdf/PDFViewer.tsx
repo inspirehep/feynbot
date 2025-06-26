@@ -13,14 +13,20 @@ import "pdfjs-dist/web/pdf_viewer.css";
 
 import PDFSearch from "./PDFSearch";
 
-const PDF_URL = "https://export.arxiv.org/pdf/1708.08021";
+const PDF_URL = "https://browse-export.arxiv.org/pdf/1708.08021";
 
 GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.mjs",
   import.meta.url,
 ).toString();
 
-const PDFViewer = ({ pdfUrl }: { pdfUrl: string }) => {
+const PDFViewer = ({
+  pdfUrl,
+  highlight,
+}: {
+  pdfUrl: string;
+  highlight?: string;
+}) => {
   return (
     <div className="relative">
       <Root
@@ -35,7 +41,7 @@ const PDFViewer = ({ pdfUrl }: { pdfUrl: string }) => {
         isZoomFitWidth
       >
         <Search>
-          <PDFSearch />
+          <PDFSearch highlight={highlight} />
         </Search>
         <Pages className="dark:brightness-[80%] dark:contrast-[228%] dark:hue-rotate-180 dark:invert-[94%]">
           <Page>

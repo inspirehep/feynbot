@@ -22,7 +22,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import UUID4
 from requests import Session
 
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger(__name__)
 
 security = HTTPBasic()
 
@@ -287,7 +287,11 @@ async def query_rag(request: QueryRequest):
     """
     try:
         logger.info("[query_rag] Received RAG query: %s", request.query)
-        return search_rag(request.query, request.model)
+        start = time.time()
+        response = search_rag(request.query, request.model)
+        end = time.time()
+        logger.info("[query_rag] RAG query processed in %.2fs", end - start)
+        return response
     except Exception as e:
         logger.error(f"Error processing RAG query: {str(e)}", exc_info=True)
         raise HTTPException(
