@@ -95,9 +95,8 @@ def clean_refs_with_snippets(
     answer: str,
     results: Dict,
 ) -> Tuple[str, List[str]]:
-    """Returns an object with [paper:snippet]
-    references as keys and paperId, snippet and display
-    (citation numbers to display starting from 1) as values"""
+    """Returns an object with [paper:snippet] references as keys and paperId, snippet
+    and display (citation numbers to display starting from 1) as values"""
     count = 1
     paper_order = {}
 
