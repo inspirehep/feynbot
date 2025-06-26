@@ -17,7 +17,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-const PDFSearch = () => {
+const PDFSearch = ({ highlight }: { highlight?: string }) => {
   const [searchText, setSearchText] = useState("");
   const [debouncedText, setDebouncedText] = useState("");
   const { jumpToHighlightRects } = usePdfJump();
@@ -39,6 +39,21 @@ const PDFSearch = () => {
       search(debouncedText, { limit: 5 });
     }
   }, [debouncedText, search]);
+
+  useEffect(() => {
+    if (highlight) {
+      setSearchText(highlight);
+      setDebouncedText(highlight);
+      search(highlight, { limit: 1 });
+    }
+  }, [highlight, search]);
+
+  useEffect(() => {
+    if (highlight && results.fuzzyMatches.length > 0) {
+      onClick(results.fuzzyMatches[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlight, results.fuzzyMatches.length]);
 
   const onClick = async (result: SearchResult) => {
     const pageProxy = getPdfPageProxy(result.pageNumber);

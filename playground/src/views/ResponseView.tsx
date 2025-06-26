@@ -25,27 +25,28 @@ export function ResponseView({
   onPaperClick,
   activePaper,
 }: ResponseViewProps) {
-  const { brief, response, citations } = fullResponse;
+  const { brief_answer, long_answer, citations } = fullResponse;
 
   // Replace citation references with clickable badges with the right number
   const renderTextWithCitations = (text: string) => {
-    return text.split(/(\[\d+:\d+\])/g).map((part, index) => {
-      const match = part.match(/\[(\d+:\d+)\]/);
+    return text.split(/(\[\d+\])/g).map((part, index) => {
+      const match = part.match(/\[(\d+)\]/);
       if (!match) return <Latex>{part}</Latex>;
 
-      const citation = citations[part];
-      if (!citation) return part;
+      const citation = citations[Number(match[1]) - 1];
+
+      if (!citation) return part[0];
 
       return (
         <Tooltip delayDuration={300} key={index}>
           <TooltipTrigger asChild>
             <span>
               <Badge
-                onClick={() => onPaperClick(citation.paperId)}
+                onClick={() => onPaperClick(citation.control_number)}
                 className="text-primary cursor-pointer rounded-full font-medium hover:underline"
                 variant="secondary"
               >
-                {citation.display}
+                {citation.doc_id}
               </Badge>
             </span>
           </TooltipTrigger>
@@ -61,7 +62,9 @@ export function ResponseView({
     const [copied, setCopied] = useState(false);
 
     const copyToClipboard = () => {
-      navigator.clipboard.writeText(response.replace(/\s*\[(\d+:\d+)\]/g, ""));
+      navigator.clipboard.writeText(
+        long_answer.replace(/\s*\[(\d+:\d+)\]/g, ""),
+      );
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     };
@@ -102,8 +105,8 @@ export function ResponseView({
 
   const TextContent = () => (
     <div className="prose prose-sm dark:prose-invert max-w-none">
-      <div className="mb-4 font-normal">{brief}</div>
-      <p>{renderTextWithCitations(response)}</p>
+      <div className="mb-4 font-normal">{brief_answer}</div>
+      <p>{renderTextWithCitations(long_answer)}</p>
     </div>
   );
 

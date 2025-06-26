@@ -139,7 +139,10 @@ export async function getPaperById(id: string): Promise<InspirePaper> {
 /**
  * Convert an INSPIRE paper to our application's paper format
  */
-export function convertInspirePaperToAppFormat(inspirePaper: InspirePaper) {
+export function convertInspirePaperToAppFormat(
+  inspirePaper: InspirePaper,
+  highlight?: string,
+) {
   const metadata = inspirePaper.metadata;
 
   return {
@@ -160,10 +163,7 @@ export function convertInspirePaperToAppFormat(inspirePaper: InspirePaper) {
         : "Unknown"),
     affiliation: metadata.authors[0]?.affiliations?.[0]?.value || "",
     abstract: metadata.abstracts?.[0]?.value || "No abstract available",
-    quote:
-      metadata.abstracts?.[0]?.value?.substring(0, 200) + "..." ||
-      "No abstract available",
-    highlights: ["results"],
+    highlight: highlight,
     citation_count: metadata.citation_count || 0,
     arxiv_id: metadata.arxiv_eprints?.[0]?.value,
     doi: metadata.dois?.[0]?.value,
