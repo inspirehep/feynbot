@@ -15,7 +15,7 @@ jobs:
         id: get_short_sha
         run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
-      - name: Build and push
+      - name: Build and push backend
         uses: cern-sis/gh-workflows/.github/actions/docker-build@v6.4.1
         with:
           context: ./ai-backend
@@ -31,3 +31,18 @@ jobs:
           password: ${{ secrets.HARBOR_PASSWORD }}
           build-args: |
             BACKEND_VERSION=sha-${{ env.SHORT_SHA }}
+
+      - name: Build and push playground
+        uses: cern-sis/gh-workflows/.github/actions/docker-build@v6.4.1
+        with:
+          context: ./playground
+          dockerfile: ./playground/Dockerfile
+          stage: prod
+          platforms: linux/amd64
+          cache: false
+          registry: registry.cern.ch
+          image: cern-sis/inspire/playground
+          tags: |
+            latest
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
