@@ -10,7 +10,7 @@ COPY . .
 ENV NODE_ENV=production
 RUN bun run build
 
-FROM nginx:alpine AS release
+FROM nginx:alpine AS prod
 
 COPY --from=install /usr/src/app/dist /usr/share/nginx/html
 
