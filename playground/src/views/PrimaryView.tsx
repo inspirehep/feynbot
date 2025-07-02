@@ -37,8 +37,18 @@ const PrimaryView = () => {
     setIsLoading(true);
 
     try {
+      function getApiUrl(): string {
+        const hostname = window.location.hostname;
+
+        if (hostname.includes("beta")) {
+          return "http://inspirebeta.net/ai";
+        }
+
+        return "http://inspirehep.net/ai";
+      }
+
       const llmResponse: LLMResponse = await fetch(
-        `https://inspirehep.net/ai/v1/query-rag`,
+        `${getApiUrl()}/v1/query-rag`,
         {
           method: "POST",
           headers: {
