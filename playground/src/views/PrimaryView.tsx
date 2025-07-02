@@ -29,7 +29,7 @@ const PrimaryView = () => {
 
   const inspireApiUrl = import.meta.env.DEV
     ? ""
-    : import.meta.env.NODE_ENV === "prod"
+    : window.location.hostname.includes("inspirehep.net")
       ? "https://inspirehep.net"
       : "https://inspirebeta.net";
 
