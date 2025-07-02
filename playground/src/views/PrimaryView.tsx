@@ -27,6 +27,12 @@ const PrimaryView = () => {
   const [activePaper, setActivePaper] = useState<PaperDetails | null>(null);
   const resizableGroup = useRef<ImperativePanelGroupHandle>(null);
 
+  const inspireApiUrl = import.meta.env.DEV
+    ? ""
+    : import.meta.env.NODE_ENV === "prod"
+      ? "https://inspirehep.net"
+      : "https://inspirebeta.net";
+
   const [formattedCitations, setFormattedCitations] = useState<
     FormattedCitation[]
   >([]);
@@ -38,7 +44,7 @@ const PrimaryView = () => {
 
     try {
       const llmResponse: LLMResponse = await fetch(
-        `https://inspirehep.net/ai/v1/query-rag`,
+        `${inspireApiUrl}/ai/v1/query-rag`,
         {
           method: "POST",
           headers: {

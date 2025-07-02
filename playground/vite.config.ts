@@ -13,4 +13,13 @@ export default defineConfig({
       "@": path.resolve(path.dirname(fileURLToPath(import.meta.url)), "./src"),
     },
   },
+  server: {
+    proxy: {
+      "^/ai/.*": {
+        target: "https://inspirebeta.net",
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
 });
