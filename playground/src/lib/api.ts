@@ -46,6 +46,12 @@ export interface InspirePaper {
       value: string;
     }>;
     document_type?: string[];
+    documents?: Array<{
+      source?: string;
+      fulltext?: boolean;
+      key?: string;
+      url?: string;
+    }>;
   };
   created: string;
   updated: string;
@@ -118,12 +124,17 @@ export async function searchPapers(
 
 /**
  * Get a specific paper by ID
+ * Passes the UI content-type in order to fech some extra details like inspire PDF URL
  */
 export async function getPaperById(id: string): Promise<InspirePaper> {
   const url = `${API_BASE_URL}/literature/${id}`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/vnd+inspire.record.ui+json",
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`API request failed with status ${response.status}`);
@@ -167,7 +178,8 @@ export function convertInspirePaperToAppFormat(
     citation_count: metadata.citation_count || 0,
     arxiv_id: metadata.arxiv_eprints?.[0]?.value,
     doi: metadata.dois?.[0]?.value,
-    document_type: metadata.document_type?.[0] || "article",
+    document_type: metadata.document_type?.[0],
+    document_url: metadata.documents?.find((d) => d.source == "arxiv")?.url,
   };
 }
 

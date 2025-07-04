@@ -1,3 +1,6 @@
+// import "pdfjs-dist/build/pdf.worker.min.mjs";
+import { usePDFCache } from "@/hooks/usePDFCache";
+import { getPDFWithCache } from "@/lib/utils";
 import {
   CanvasLayer,
   HighlightLayer,
@@ -10,10 +13,10 @@ import {
 import { Loader2 } from "lucide-react";
 import { GlobalWorkerOptions } from "pdfjs-dist";
 import "pdfjs-dist/web/pdf_viewer.css";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
-import PDFSearch from "./PDFSearch";
-
-const PDF_URL = "https://browse-export.arxiv.org/pdf/1708.08021";
+import PDFSearch from "@/components/pdf/PDFSearch";
 
 GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.mjs",
@@ -27,17 +30,43 @@ const PDFViewer = ({
   pdfUrl: string;
   highlight?: string;
 }) => {
+  const { getCachedPDF, cachePDF, getPendingRequest, setPendingRequest } =
+    usePDFCache();
+  const [effectivePdfUrl, setEffectivePdfUrl] = useState<string>("");
+
+  // PDFs are already cached, otherwise fetch them
+  useEffect(() => {
+    (async () => {
+      const blobUrl = await getPDFWithCache(
+        pdfUrl,
+        getCachedPDF,
+        cachePDF,
+        getPendingRequest,
+        setPendingRequest,
+      );
+
+      if (blobUrl) {
+        setEffectivePdfUrl(blobUrl);
+      } else {
+        toast.error("Failed to fetch PDF");
+        setEffectivePdfUrl(pdfUrl);
+      }
+    })();
+  }, [pdfUrl, getCachedPDF, cachePDF, getPendingRequest, setPendingRequest]);
+
+  const LoadingSpinner = () => (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <Loader2 className="text-primary h-8 w-8 animate-spin" />
+      <span className="ml-2">Loading...</span>
+    </div>
+  );
+
   return (
     <div className="relative">
       <Root
-        source={pdfUrl || PDF_URL}
-        className="h-[calc(100vh-15rem)] overflow-y-auto" // Subtract top and bottom bars
-        loader={
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Loader2 className="text-primary h-8 w-8 animate-spin" />
-            <span className="ml-2">Loading...</span>
-          </div>
-        }
+        source={effectivePdfUrl}
+        className="h-[calc(100vh-15rem)] overflow-y-auto"
+        loader={<LoadingSpinner />}
         isZoomFitWidth
       >
         <Search>
