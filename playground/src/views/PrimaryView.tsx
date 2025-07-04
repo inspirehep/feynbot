@@ -1,13 +1,15 @@
+import { usePDFCache } from "@/hooks/usePDFCache";
 import { convertInspirePaperToAppFormat, getPaperById } from "@/lib/api";
+import { getPDFWithCache, getPaperUrl } from "@/lib/utils";
 import { ResponseView } from "@/views/ResponseView";
 import { FileSearch2, Search } from "lucide-react";
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { ImperativePanelGroupHandle } from "react-resizable-panels";
 import { toast } from "sonner";
 
 import { PaperCard } from "@/components/PaperCard";
 import { PaperHeader } from "@/components/paper/PaperHeader";
-import PDFViewer from "@/components/pdf/PDFViewer";
+import PDFManager from "@/components/pdf/PDFManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,6 +29,14 @@ const PrimaryView = () => {
   const [activePaper, setActivePaper] = useState<PaperDetails | null>(null);
   const resizableGroup = useRef<ImperativePanelGroupHandle>(null);
 
+  const {
+    clearCache,
+    getCachedPDF,
+    cachePDF,
+    getPendingRequest,
+    setPendingRequest,
+  } = usePDFCache();
+
   const inspireApiUrl = import.meta.env.DEV
     ? ""
     : window.location.hostname.includes("inspirehep.net")
@@ -40,6 +50,8 @@ const PrimaryView = () => {
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
 
+    clearCache();
+    setActivePaper(null);
     setIsLoading(true);
 
     try {
@@ -148,6 +160,38 @@ const PrimaryView = () => {
     </form>
   );
 
+  // Pre-fetch all PDFs
+  useEffect(() => {
+    const prefetchPDFs = async () => {
+      const fetchPromises = formattedCitations.map(async (citation) => {
+        const paper = citation.paper;
+        const pdfUrl = getPaperUrl(paper);
+
+        if (pdfUrl) {
+          await getPDFWithCache(
+            pdfUrl,
+            getCachedPDF,
+            cachePDF,
+            getPendingRequest,
+            setPendingRequest,
+          );
+        }
+      });
+
+      await Promise.all(fetchPromises);
+    };
+
+    if (formattedCitations.length > 0) {
+      prefetchPDFs();
+    }
+  }, [
+    formattedCitations,
+    getCachedPDF,
+    cachePDF,
+    getPendingRequest,
+    setPendingRequest,
+  ]);
+
   if (activePaper) {
     return (
       <div className="fixed inset-0 flex flex-col">
@@ -158,17 +202,9 @@ const PrimaryView = () => {
             <ResizablePanel defaultSize={50} minSize={25}>
               <div className="relative h-full">
                 <div className="after:from-background h-full after:absolute after:right-0 after:bottom-0 after:left-0 after:h-12 after:bg-gradient-to-t after:to-transparent">
-                  <PDFViewer
-                    pdfUrl={
-                      activePaper.arxiv_id
-                        ? `https://browse-export.arxiv.org/pdf/${activePaper.arxiv_id}`
-                        : ""
-                    }
-                    highlight={
-                      activePaper.highlight
-                        ? activePaper.highlight.slice(0, 15)
-                        : ""
-                    }
+                  <PDFManager
+                    papers={formattedCitations.map((c) => c.paper)}
+                    activePaper={activePaper}
                   />
                 </div>
               </div>
