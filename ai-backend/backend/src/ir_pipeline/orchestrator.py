@@ -4,6 +4,7 @@ from os import getenv
 from backend.src.ir_pipeline.chains import (
     create_answer_generation_chain,
     create_query_expansion_chain,
+    create_rag_answer_generation_chain,
 )
 from backend.src.ir_pipeline.schema import LLMResponse, Terms
 from backend.src.ir_pipeline.tools.inspire import (
@@ -14,8 +15,15 @@ from backend.src.ir_pipeline.utils.inspire_formatter import (
     clean_refs,
     clean_refs_with_snippets,
     extract_context,
+    format_docs,
+    format_refs,
 )
+from backend.src.ir_pipeline.utils.utils import timer
+from backend.src.schemas.query import QueryResponse
+from backend.src.utils.embeddings import VLLMOpenAIEmbeddings
+from backend.src.utils.reranker import CustomJinaRerank
 from langchain_community.llms import VLLMOpenAI
+from langchain_community.vectorstores import OpenSearchVectorSearch
 from langfuse.callback import CallbackHandler
 
 LANGFUSE_HANDLER = CallbackHandler(
@@ -26,6 +34,64 @@ LANGFUSE_HANDLER = CallbackHandler(
 )
 
 CHAIN_CACHE = {}
+RESOURCE_CACHE = {}
+
+
+def create_langfuse_config(user: str = None):
+    return {
+        "callbacks": [LANGFUSE_HANDLER],
+        "metadata": {
+            "langfuse_session_id": str(uuid.uuid4()),
+            **({"langfuse_user_id": user} if user else {}),
+        },
+    }
+
+
+def initialize_rag_resources():
+    global RESOURCE_CACHE
+
+    if "embedding_model" not in RESOURCE_CACHE:
+        RESOURCE_CACHE["embedding_model"] = VLLMOpenAIEmbeddings(
+            model_name=getenv("EMBEDDING_MODEL"),
+            openai_api_base=f"{getenv('API_BASE')}/v1",
+            openai_api_key=getenv("KUBEFLOW_API_KEY"),
+            default_headers=(
+                {"Host": getenv("KUBEFLOW_EMBEDDING_HOST")}
+                if getenv("KUBEFLOW_EMBEDDING_HOST")
+                else {}
+            ),
+            timeout=15,
+        )
+
+    if "vector_store" not in RESOURCE_CACHE:
+        RESOURCE_CACHE["vector_store"] = OpenSearchVectorSearch(
+            index_name=getenv("VECTOR_DB_INDEX"),
+            embedding_function=RESOURCE_CACHE["embedding_model"],
+            opensearch_url=getenv("VECTOR_DB_HOST"),
+            http_auth=(
+                getenv("VECTOR_DB_USERNAME"),
+                getenv("VECTOR_DB_PASSWORD"),
+            ),
+            use_ssl=True,
+            verify_certs=False,
+            ssl_show_warn=False,
+            url_prefix="/os",
+            timeout=30,
+        )
+
+    if "reranker" not in RESOURCE_CACHE:
+        RESOURCE_CACHE["reranker"] = CustomJinaRerank(
+            model_name=getenv("RERANKING_MODEL"),
+            openai_api_base=f"{getenv('API_BASE')}/v1",
+            openai_api_key=getenv("KUBEFLOW_API_KEY"),
+            default_headers=(
+                {"Host": getenv("KUBEFLOW_RERANKING_HOST")}
+                if getenv("KUBEFLOW_RERANKING_HOST")
+                else {}
+            ),
+            top_n=10,
+            timeout=40,
+        )
 
 
 def initialize_chains(model):
@@ -54,6 +120,7 @@ def initialize_chains(model):
         "answer_chain_playground": create_answer_generation_chain(
             llm=llm, prompt_name="generate-answer-playground"
         ),
+        "answer_chain_rag": create_rag_answer_generation_chain(llm=llm),
     }
 
 
@@ -73,13 +140,7 @@ async def search_common(
     else:
         inspire_search_tool = InspireSearchTool()
 
-    config = {
-        "callbacks": [LANGFUSE_HANDLER],
-        "metadata": {
-            "langfuse_session_id": str(uuid.uuid4()),
-            **({"langfuse_user_id": user} if user else {}),
-        },
-    }
+    config = create_langfuse_config(user)
 
     expand_chain = CHAIN_CACHE[model]["expand_chain"]
     answer_chain = (
@@ -131,3 +192,45 @@ async def search_playground(query, model):
         "response": clean_response,
         "citations": citations,
     }
+
+
+async def search_rag(query: str, model: str, user: str = None):
+    initialize_rag_resources()
+    initialize_chains(model)
+
+    embedding_model = RESOURCE_CACHE["embedding_model"]
+    vector_store = RESOURCE_CACHE["vector_store"]
+    reranker = RESOURCE_CACHE["reranker"]
+    answer_chain = CHAIN_CACHE[model]["answer_chain_rag"]
+
+    config = create_langfuse_config(user)
+
+    with timer("RAG Embedding"):
+        query_embedding = embedding_model.embed_query(query)
+
+    with timer("RAG Retrieval"):
+        docs = vector_store.similarity_search_by_vector(
+            embedding=query_embedding,
+            k=25,
+        )
+
+    with timer("RAG Reranking"):
+        ranked_docs = reranker.compress_documents(
+            documents=docs,
+            query=query,
+        )
+
+    context = format_docs(ranked_docs)
+
+    with timer("RAG LLM"):
+        response: LLMResponse = await answer_chain.ainvoke(
+            {"question": query, "context": context}, config=config
+        )
+
+    formatted_response, citations = format_refs(response.response, ranked_docs)
+
+    return QueryResponse(
+        brief_answer=response.brief,
+        long_answer=formatted_response,
+        citations=citations,
+    )
