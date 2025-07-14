@@ -7,14 +7,12 @@ from os import getenv
 from typing import Annotated
 
 from backend.src.database import SessionLocal, get_db
-from backend.src.ir_pipeline.orchestrator import search, search_playground
+from backend.src.ir_pipeline.orchestrator import search, search_playground, search_rag
 from backend.src.ir_pipeline.schema import Terms
 from backend.src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool
 from backend.src.models import Feedback, QueryIr, SearchFeedback
-from backend.src.rag_pipeline.rag_pipeline import search_rag
-from backend.src.rag_pipeline.schemas import QueryResponse
 from backend.src.schemas.feedback import FeedbackRequest
-from backend.src.schemas.query import QueryRequest
+from backend.src.schemas.query import QueryRequest, QueryResponse
 from backend.src.schemas.search_feedback import SearchFeedbackRequest
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -288,7 +286,7 @@ async def query_rag(request: QueryRequest):
     try:
         logger.info("[query_rag] Received RAG query: %s", request.query)
         start = time.time()
-        response = search_rag(request.query, request.model)
+        response = await search_rag(request.query, request.model, request.user)
         end = time.time()
         logger.info("[query_rag] RAG query processed in %.2fs", end - start)
         return response
