@@ -7,8 +7,21 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export const getInspireBaseUrl = (() => {
+  let cached: string | null = null;
+
+  return (): string => {
+    if (cached === null) {
+      cached = window.location.hostname.includes("inspirehep.net")
+        ? "https://inspirehep.net"
+        : "https://inspirebeta.net";
+    }
+    return cached;
+  };
+})();
+
 export const getCitationsUrl = (paperId: string) => {
-  return `https://inspirehep.net/literature?q=refersto%3Arecid%3A${paperId}`;
+  return `${getInspireBaseUrl()}/literature?q=refersto%3Arecid%3A${paperId}`;
 };
 
 export const formatAuthors = (

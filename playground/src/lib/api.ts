@@ -1,8 +1,9 @@
 /**
  * Service for interacting with the INSPIRE HEP API
  */
+import { getInspireBaseUrl } from "./utils";
 
-const API_BASE_URL = "https://inspirehep.net/api";
+const API_BASE_URL = `${getInspireBaseUrl()}/api`;
 
 export interface InspireSearchParams {
   q?: string;
