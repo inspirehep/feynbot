@@ -1,3 +1,5 @@
+import { getInspireBaseUrl } from "@/lib/utils";
+
 import { Button } from "@/components/ui/button";
 
 export function CollaborationDisplay({
@@ -11,7 +13,7 @@ export function CollaborationDisplay({
         <span key={collaboration}>
           <Button variant="link" size="sm" className="h-4 p-0" asChild>
             <a
-              href={`https://inspirehep.net/literature?q=collaboration:${collaboration}`}
+              href={`${getInspireBaseUrl()}/literature?q=collaboration:${collaboration}`}
               target="_blank"
               rel="noopener noreferrer"
             >

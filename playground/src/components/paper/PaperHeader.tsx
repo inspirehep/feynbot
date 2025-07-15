@@ -1,4 +1,4 @@
-import { formatAuthors } from "@/lib/utils";
+import { formatAuthors, getInspireBaseUrl } from "@/lib/utils";
 import { Award, X } from "lucide-react";
 import { useEffect } from "react";
 
@@ -119,7 +119,7 @@ export function PaperHeader({ paper, onClose }: PaperHeaderProps) {
                       asChild
                     >
                       <a
-                        href={`https://inspirehep.net/literature/${paper.id}`}
+                        href={`${getInspireBaseUrl()}/literature/${paper.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
