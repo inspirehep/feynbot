@@ -6,5 +6,9 @@ class LLMResponse(BaseModel):
     brief: str
 
 
+class LLMPaperResponse(BaseModel):
+    response: str
+
+
 class Terms(BaseModel):
     terms: list[str]

@@ -20,6 +20,9 @@ export const getInspireBaseUrl = (() => {
   };
 })();
 
+export const getInspireAiUrl = () =>
+  `${import.meta.env.DEV ? "" : getInspireBaseUrl()}/ai`;
+
 export const getCitationsUrl = (paperId: string) => {
   return `${getInspireBaseUrl()}/literature?q=refersto%3Arecid%3A${paperId}`;
 };
@@ -37,9 +40,9 @@ export const formatAuthors = (
   }
 
   if (authors.length <= count) {
-    return authors.join(", ");
+    return authors.join("; ");
   }
-  return `${authors.slice(0, count).join(", ")} et al.`;
+  return `${authors.slice(0, count).join("; ")} et al.`;
 };
 
 export const getPaperUrl = (paper: PaperDetails) =>

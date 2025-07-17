@@ -4,15 +4,20 @@ import time
 from datetime import datetime
 from io import StringIO
 from os import getenv
-from typing import Annotated
+from typing import Annotated, Union
 
 from backend.src.database import SessionLocal, get_db
-from backend.src.ir_pipeline.orchestrator import search, search_playground, search_rag
+from backend.src.ir_pipeline.orchestrator import (
+    search,
+    search_playground,
+    search_rag,
+    search_rag_paper,
+)
 from backend.src.ir_pipeline.schema import Terms
 from backend.src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool
 from backend.src.models import Feedback, QueryIr, SearchFeedback
 from backend.src.schemas.feedback import FeedbackRequest
-from backend.src.schemas.query import QueryRequest, QueryResponse
+from backend.src.schemas.query import QueryPaperResponse, QueryRequest, QueryResponse
 from backend.src.schemas.search_feedback import SearchFeedbackRequest
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -278,15 +283,35 @@ async def export_feedback(
         return feedbacks
 
 
-@router.post("/query-rag", response_model=QueryResponse)
-async def query_rag(request: QueryRequest):
+@router.post(
+    "/query-rag",
+    response_model=Union[QueryResponse, QueryPaperResponse],
+)
+async def query_rag(request: QueryRequest) -> Union[QueryResponse, QueryPaperResponse]:
     """
     Process a query using the RAG pipeline and return the response with citations.
     """
     try:
         logger.info("[query_rag] Received RAG query: %s", request.query)
         start = time.time()
-        response = await search_rag(request.query, request.model, request.user)
+
+        if request.control_number is not None:
+            chat_history = (
+                [msg.model_dump() for msg in request.history]
+                if request.history
+                else None
+            )
+
+            response = await search_rag_paper(
+                request.query,
+                request.model,
+                request.control_number,
+                request.user,
+                chat_history,
+            )
+        else:
+            response = await search_rag(request.query, request.model, request.user)
+
         end = time.time()
         logger.info("[query_rag] RAG query processed in %.2fs", end - start)
         return response
