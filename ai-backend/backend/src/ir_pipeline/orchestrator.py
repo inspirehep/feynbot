@@ -5,8 +5,9 @@ from backend.src.ir_pipeline.chains import (
     create_answer_generation_chain,
     create_query_expansion_chain,
     create_rag_answer_generation_chain,
+    create_rag_paper_answer_generation_chain,
 )
-from backend.src.ir_pipeline.schema import LLMResponse, Terms
+from backend.src.ir_pipeline.schema import LLMPaperResponse, LLMResponse, Terms
 from backend.src.ir_pipeline.tools.inspire import (
     InspireOSFullTextSearchTool,
     InspireSearchTool,
@@ -19,9 +20,10 @@ from backend.src.ir_pipeline.utils.inspire_formatter import (
     format_refs,
 )
 from backend.src.ir_pipeline.utils.utils import timer
-from backend.src.schemas.query import QueryResponse
+from backend.src.schemas.query import QueryPaperResponse, QueryResponse
 from backend.src.utils.embeddings import VLLMOpenAIEmbeddings
 from backend.src.utils.reranker import CustomJinaRerank
+from langchain.schema import Document
 from langchain_community.llms import VLLMOpenAI
 from langchain_community.vectorstores import OpenSearchVectorSearch
 from langfuse.callback import CallbackHandler
@@ -121,6 +123,7 @@ def initialize_chains(model):
             llm=llm, prompt_name="generate-answer-playground"
         ),
         "answer_chain_rag": create_rag_answer_generation_chain(llm=llm),
+        "answer_chain_rag_paper": create_rag_paper_answer_generation_chain(llm=llm),
     }
 
 
@@ -194,14 +197,15 @@ async def search_playground(query, model):
     }
 
 
-async def search_rag(query: str, model: str, user: str = None):
+async def _rag_common(
+    query: str, model: str, user: str = None, control_number: int = None
+):
     initialize_rag_resources()
     initialize_chains(model)
 
     embedding_model = RESOURCE_CACHE["embedding_model"]
     vector_store = RESOURCE_CACHE["vector_store"]
     reranker = RESOURCE_CACHE["reranker"]
-    answer_chain = CHAIN_CACHE[model]["answer_chain_rag"]
 
     config = create_langfuse_config(user)
 
@@ -209,10 +213,37 @@ async def search_rag(query: str, model: str, user: str = None):
         query_embedding = embedding_model.embed_query(query)
 
     with timer("RAG Retrieval"):
-        docs = vector_store.similarity_search_by_vector(
-            embedding=query_embedding,
-            k=25,
-        )
+        if control_number:
+            os_client = vector_store.client
+            index_name = vector_store.index_name
+
+            # We need a direct OpenSearch query as LangChain methods don't support
+            # filtering with empty queries
+            search_body = {
+                "query": {"term": {"metadata.control_number": control_number}},
+                "size": 25,
+                "_source": ["text", "metadata"],
+            }
+
+            try:
+                response = os_client.search(index=index_name, body=search_body)
+
+                docs = [
+                    Document(
+                        page_content=hit["_source"]["text"],
+                        metadata=hit["_source"]["metadata"],
+                    )
+                    for hit in response["hits"]["hits"]
+                ]
+
+            except Exception as e:
+                print(f"OpenSearch query failed: {e}")
+                docs = []
+        else:
+            docs = vector_store.similarity_search_by_vector(
+                embedding=query_embedding,
+                k=25,
+            )
 
     with timer("RAG Reranking"):
         ranked_docs = reranker.compress_documents(
@@ -221,6 +252,14 @@ async def search_rag(query: str, model: str, user: str = None):
         )
 
     context = format_docs(ranked_docs)
+
+    return ranked_docs, context, config
+
+
+async def search_rag(query: str, model: str, user: str = None):
+    ranked_docs, context, config = await _rag_common(query, model, user)
+
+    answer_chain = CHAIN_CACHE[model]["answer_chain_rag"]
 
     with timer("RAG LLM"):
         response: LLMResponse = await answer_chain.ainvoke(
@@ -233,4 +272,38 @@ async def search_rag(query: str, model: str, user: str = None):
         brief_answer=response.brief,
         long_answer=formatted_response,
         citations=citations,
+    )
+
+
+async def search_rag_paper(
+    query: str,
+    model: str,
+    control_number: int,
+    user: str = None,
+    chat_history: list = None,
+):
+    ranked_docs, context, config = await _rag_common(query, model, user, control_number)
+
+    answer_chain = CHAIN_CACHE[model]["answer_chain_rag_paper"]
+
+    chat_messages = []
+    if chat_history:
+        for msg in chat_history:
+            role = "user" if msg["type"] == "user" else "assistant"
+            chat_messages.append({"role": role, "content": msg["content"]})
+
+    with timer("RAG LLM"):
+        response: LLMPaperResponse = await answer_chain.ainvoke(
+            {
+                "question": query,
+                "context": context,
+                "history": chat_messages,
+            },
+            config=config,
+        )
+
+    formatted_response, _ = format_refs(response.response, ranked_docs)
+
+    return QueryPaperResponse(
+        long_answer=formatted_response,
     )

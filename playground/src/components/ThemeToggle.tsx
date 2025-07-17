@@ -81,6 +81,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       <Button
         variant="ghost"
         size="icon"
+        style={{ borderRadius: "50%" }}
         className={className}
         onClick={transitTheme}
       >

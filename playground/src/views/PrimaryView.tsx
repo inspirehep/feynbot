@@ -1,24 +1,24 @@
 import { usePDFCache } from "@/hooks/usePDFCache";
+import { usePaperChatHistory } from "@/hooks/usePaperChatHistory";
 import { convertInspirePaperToAppFormat, getPaperById } from "@/lib/api";
-import { getPDFWithCache, getPaperUrl } from "@/lib/utils";
+import { getInspireAiUrl, getPDFWithCache, getPaperUrl } from "@/lib/utils";
+import PaperView from "@/views/PaperView";
 import { ResponseView } from "@/views/ResponseView";
-import { FileSearch2, Search } from "lucide-react";
-import { FormEvent, useEffect, useRef, useState } from "react";
-import { ImperativePanelGroupHandle } from "react-resizable-panels";
+import { Search } from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { PaperCard } from "@/components/PaperCard";
-import { PaperHeader } from "@/components/paper/PaperHeader";
-import PDFManager from "@/components/pdf/PDFManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
+import { Loading } from "@/components/ui/loading";
 
-import { FormattedCitation, LLMResponse, PaperDetails } from "@/types";
+import {
+  FormattedCitation,
+  LLMResponse,
+  PaperDetails,
+  QueryRequest,
+} from "@/types";
 
 import Logo from "../assets/inspire-logo.svg?react";
 
@@ -27,7 +27,8 @@ const PrimaryView = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<LLMResponse | null>(null);
   const [activePaper, setActivePaper] = useState<PaperDetails | null>(null);
-  const resizableGroup = useRef<ImperativePanelGroupHandle>(null);
+
+  const { clearAllHistories } = usePaperChatHistory();
 
   const {
     clearCache,
@@ -37,32 +38,32 @@ const PrimaryView = () => {
     setPendingRequest,
   } = usePDFCache();
 
-  const inspireApiUrl = import.meta.env.DEV
-    ? ""
-    : window.location.hostname.includes("inspirehep.net")
-      ? "https://inspirehep.net"
-      : "https://inspirebeta.net";
-
   const [formattedCitations, setFormattedCitations] = useState<
     FormattedCitation[]
   >([]);
 
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
+    await handleGeneralSearch();
+  };
 
+  const handleGeneralSearch = async () => {
     clearCache();
     setActivePaper(null);
+    clearAllHistories();
     setIsLoading(true);
 
     try {
+      const requestBody: QueryRequest = { query: query };
+
       const llmResponse: LLMResponse = await fetch(
-        `${inspireApiUrl}/ai/v1/query-rag`,
+        `${getInspireAiUrl()}/v1/query-rag`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ query: query }),
+          body: JSON.stringify(requestBody),
         },
       ).then((res) => res.json());
 
@@ -129,18 +130,10 @@ const PrimaryView = () => {
     <form onSubmit={handleSearch} className="bg-background px-4 pt-4">
       <div className="flex gap-2">
         <div className="relative flex-1">
-          {activePaper ? (
-            <FileSearch2 className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-          ) : (
-            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-          )}
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             type="text"
-            placeholder={
-              activePaper
-                ? "Ask questions about the current paper"
-                : "Ask about high-energy physics..."
-            }
+            placeholder="Ask about high-energy physics..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="h-12 pl-10"
@@ -194,65 +187,15 @@ const PrimaryView = () => {
 
   if (activePaper) {
     return (
-      <div className="fixed inset-0 flex flex-col">
-        <PaperHeader paper={activePaper} onClose={() => setActivePaper(null)} />
-
-        <div className="mt-[5rem] h-[calc(100vh-15rem)]">
-          <ResizablePanelGroup direction="horizontal" ref={resizableGroup}>
-            <ResizablePanel defaultSize={50} minSize={25}>
-              <div className="relative h-full">
-                <div className="after:from-background h-full after:absolute after:right-0 after:bottom-0 after:left-0 after:h-12 after:bg-gradient-to-t after:to-transparent">
-                  <PDFManager
-                    papers={formattedCitations.map((c) => c.paper)}
-                    activePaper={activePaper}
-                  />
-                </div>
-              </div>
-            </ResizablePanel>
-            <ResizableHandle
-              withHandle
-              onDoubleClick={() => resizableGroup?.current?.setLayout([50, 50])}
-            />
-            <ResizablePanel defaultSize={50} minSize={25}>
-              <div className="flex h-full flex-col">
-                <div className="flex-1 overflow-y-auto">
-                  {isLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="border-primary h-12 w-12 animate-spin rounded-full border-2 border-t-transparent" />
-                    </div>
-                  ) : (
-                    response && (
-                      <ResponseView
-                        fullResponse={response}
-                        onPaperClick={handlePaperClick}
-                        activePaper={activePaper}
-                      />
-                    )
-                  )}
-                </div>
-                {renderSearchForm()}
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </div>
-
-        <div className="relative px-4">
-          <div className="flex gap-4 overflow-x-auto p-4">
-            {formattedCitations.map((citation) => (
-              <div key={citation.id} className="min-w-[300px]">
-                <PaperCard
-                  formattedCitation={citation}
-                  isActive={activePaper?.id === citation.paper.id}
-                  onClick={() => handlePaperClick(citation.id)}
-                  displayType="footer"
-                />
-              </div>
-            ))}
-          </div>
-          <div className="from-background absolute inset-y-0 left-4 w-8 bg-gradient-to-r" />
-          <div className="from-background absolute inset-y-0 right-4 w-8 bg-gradient-to-l" />
-        </div>
-      </div>
+      <PaperView
+        activePaper={activePaper}
+        onClose={() => {
+          setActivePaper(null);
+        }}
+        formattedCitations={formattedCitations}
+        onPaperClick={handlePaperClick}
+        generalResponse={response}
+      />
     );
   }
 
@@ -284,7 +227,7 @@ const PrimaryView = () => {
         <div className="p-4 pt-8">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="border-primary h-12 w-12 animate-spin rounded-full border-2 border-t-transparent" />
+              <Loading />
             </div>
           ) : (
             response && (
