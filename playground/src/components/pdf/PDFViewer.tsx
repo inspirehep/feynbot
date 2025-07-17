@@ -2,6 +2,7 @@
 import { usePDFCache } from "@/hooks/usePDFCache";
 import { getPDFWithCache } from "@/lib/utils";
 import {
+  AnnotationLayer,
   CanvasLayer,
   HighlightLayer,
   Page,
@@ -10,13 +11,13 @@ import {
   Search,
   TextLayer,
 } from "@anaralabs/lector";
-import { Loader2 } from "lucide-react";
 import { GlobalWorkerOptions } from "pdfjs-dist";
 import "pdfjs-dist/web/pdf_viewer.css";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import PDFSearch from "@/components/pdf/PDFSearch";
+import { Loading } from "@/components/ui/loading";
 
 GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.mjs",
@@ -56,8 +57,7 @@ const PDFViewer = ({
 
   const LoadingSpinner = () => (
     <div className="absolute inset-0 flex items-center justify-center">
-      <Loader2 className="text-primary h-8 w-8 animate-spin" />
-      <span className="ml-2">Loading...</span>
+      <Loading text="Loading PDF..." />
     </div>
   );
 
@@ -76,6 +76,7 @@ const PDFViewer = ({
           <Page>
             <CanvasLayer />
             <TextLayer />
+            <AnnotationLayer />
             <HighlightLayer className="bg-yellow-200/70" />
           </Page>
         </Pages>

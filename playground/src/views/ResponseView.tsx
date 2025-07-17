@@ -18,12 +18,16 @@ interface ResponseViewProps {
   fullResponse: LLMResponse;
   onPaperClick: (paperId: number) => void;
   activePaper: PaperDetails | null;
+  isCollapsible?: boolean;
+  isExpanded?: boolean;
 }
 
 export function ResponseView({
   fullResponse,
   onPaperClick,
   activePaper,
+  isCollapsible = false,
+  isExpanded = true,
 }: ResponseViewProps) {
   const { brief_answer, long_answer, citations } = fullResponse;
 
@@ -31,7 +35,7 @@ export function ResponseView({
   const renderTextWithCitations = (text: string) => {
     return text.split(/(\[\d+\])/g).map((part, index) => {
       const match = part.match(/\[(\d+)\]/);
-      if (!match) return <Latex>{part}</Latex>;
+      if (!match) return <Latex key={index}>{part}</Latex>;
 
       const citation = citations[Number(match[1]) - 1];
 
@@ -62,9 +66,7 @@ export function ResponseView({
     const [copied, setCopied] = useState(false);
 
     const copyToClipboard = () => {
-      navigator.clipboard.writeText(
-        long_answer.replace(/\s*\[(\d+:\d+)\]/g, ""),
-      );
+      navigator.clipboard.writeText(long_answer.replace(/\s*\[(\d+)\]/g, ""));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     };
@@ -105,13 +107,17 @@ export function ResponseView({
 
   const TextContent = () => (
     <div className="prose prose-sm dark:prose-invert max-w-none">
-      <div className="mb-4 font-normal">{brief_answer}</div>
-      <p>{renderTextWithCitations(long_answer)}</p>
+      <div className="font-normal">{brief_answer}</div>
+      {(!isCollapsible || isExpanded) && (
+        <div className="mt-4">
+          <p>{renderTextWithCitations(long_answer)}</p>
+        </div>
+      )}
     </div>
   );
 
   return (
-    <div className="overflow-y-auto pb-4">
+    <div className="overflow-y-auto">
       {activePaper ? (
         <div>
           <div className="flex flex-row items-start justify-between p-6">

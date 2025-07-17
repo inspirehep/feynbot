@@ -1,16 +1,11 @@
-import { formatAuthors, getInspireBaseUrl } from "@/lib/utils";
-import { Award, X } from "lucide-react";
+import { formatAuthors, getCitationsUrl, getInspireBaseUrl } from "@/lib/utils";
+import { ArrowLeft, Award } from "lucide-react";
 import { useEffect } from "react";
 
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AuthorsModal } from "@/components/paper/AuthorsModal";
 import { CollaborationDisplay } from "@/components/paper/CollaborationDisplay";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 import { PaperDetails } from "@/types";
 
@@ -45,14 +40,26 @@ export function PaperHeader({ paper, onClose }: PaperHeaderProps) {
     <div className="bg-background/95 fixed top-0 right-0 left-0 h-[5rem] border-b py-4 pl-0 backdrop-blur">
       <div className="flex h-full items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="h-[5rem] w-[5rem]"
-          >
-            <InspireInSvg className="size-10" />
-          </Button>
+          <div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-[5rem] w-[5rem]"
+              aria-label="Back"
+            >
+              <ArrowLeft className="size-10" strokeWidth={1.1} />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-[5rem] w-[5rem]"
+            >
+              <InspireInSvg className="size-10" />
+            </Button>
+          </div>
           <div className="flex flex-col gap-2">
             <h2 className="line-clamp-1 text-xl font-semibold">
               {paper.title}
@@ -103,7 +110,7 @@ export function PaperHeader({ paper, onClose }: PaperHeaderProps) {
                     asChild
                   >
                     <a
-                      href={`https://inspirehep.net/literature/${paper.id}`}
+                      href={`${getInspireBaseUrl()}/literature/${paper.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -119,7 +126,7 @@ export function PaperHeader({ paper, onClose }: PaperHeaderProps) {
                       asChild
                     >
                       <a
-                        href={`${getInspireBaseUrl()}/literature/${paper.id}`}
+                        href={getCitationsUrl(paper.id)}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -133,29 +140,7 @@ export function PaperHeader({ paper, onClose }: PaperHeaderProps) {
             </p>
           </div>
         </div>
-        <div className="flex items-center">
-          <ThemeToggle className="text-muted-foreground h-[5rem]" />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="h-[5rem] w-[5rem]"
-              >
-                <X className="size-10" strokeWidth={1.1} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="py-2">
-              <span>
-                Close{" "}
-                <kbd className="bg-muted-foreground px-2 py-1 font-mono">
-                  Esc
-                </kbd>
-              </span>
-            </TooltipContent>
-          </Tooltip>
-        </div>
+        <ThemeToggle className="text-muted-foreground m-5" />
       </div>
     </div>
   );

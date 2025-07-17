@@ -9,19 +9,21 @@ logger = logging.getLogger(__name__)
 langfuse = Langfuse()
 
 
+# Locally langfuse.environment should be unset (None)
 def get_prompt(prompt_name: str):
     def fetch_prompt(label: str = None):
         return langfuse.get_prompt(
             prompt_name,
-            cache_ttl_seconds=0 if langfuse.environment == "local" else None,
+            cache_ttl_seconds=0 if langfuse.environment is None else None,
             label=label,
         )
 
     try:
-        langfuse_prompt = fetch_prompt(label=langfuse.environment)
+        label = "latest" if langfuse.environment is None else langfuse.environment
+        langfuse_prompt = fetch_prompt(label=label)
     except NotFoundError:
         logger.warning(
-            f"Prompt '{prompt_name}' or label '{langfuse.environment}' "
+            f"Prompt '{prompt_name}' or label '{label}' "
             f"not found in Langfuse, trying label 'production'"
         )
         langfuse_prompt = fetch_prompt()

@@ -1,4 +1,4 @@
-from backend.src.ir_pipeline.schema import LLMResponse, Terms
+from backend.src.ir_pipeline.schema import LLMPaperResponse, LLMResponse, Terms
 from backend.src.utils.langfuse import get_prompt
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.output_parsers import PydanticOutputParser
@@ -32,6 +32,16 @@ def create_rag_answer_generation_chain(llm: BaseLanguageModel):
     output_parser = PydanticOutputParser(pydantic_object=LLMResponse)
     config = RunnableConfig(
         run_name="rag-query", metadata={"langfuse_prompt": langfuse_prompt}
+    )
+    chain = prompt_template | llm | output_parser
+    return chain.with_config(config)
+
+
+def create_rag_paper_answer_generation_chain(llm: BaseLanguageModel):
+    prompt_template, langfuse_prompt = get_prompt("rag-paper-query")
+    output_parser = PydanticOutputParser(pydantic_object=LLMPaperResponse)
+    config = RunnableConfig(
+        run_name="rag-paper-query", metadata={"langfuse_prompt": langfuse_prompt}
     )
     chain = prompt_template | llm | output_parser
     return chain.with_config(config)
