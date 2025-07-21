@@ -16,12 +16,17 @@ from backend.src.ir_pipeline.orchestrator import (
 from backend.src.ir_pipeline.schema import Terms
 from backend.src.ir_pipeline.tools.inspire import InspireOSFullTextSearchTool
 from backend.src.models import Feedback, QueryIr, SearchFeedback
-from backend.src.schemas.feedback import FeedbackRequest
+from backend.src.schemas.feedback import (
+    FeedbackRequest,
+    RagFeedbackRequest,
+    RagFeedbackResponse,
+)
 from backend.src.schemas.query import QueryPaperResponse, QueryRequest, QueryResponse
 from backend.src.schemas.search_feedback import SearchFeedbackRequest
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from langfuse import Langfuse
 from pydantic import UUID4
 from requests import Session
 
@@ -32,6 +37,12 @@ security = HTTPBasic()
 router = APIRouter(
     tags=["v1"],
     responses={404: {"description": "Not found"}},
+)
+
+langfuse_client = Langfuse(
+    public_key=getenv("LANGFUSE_PUBLIC_KEY"),
+    secret_key=getenv("LANGFUSE_SECRET_KEY"),
+    host=getenv("LANGFUSE_HOST"),
 )
 
 
@@ -319,4 +330,33 @@ async def query_rag(request: QueryRequest) -> Union[QueryResponse, QueryPaperRes
         logger.error(f"Error processing RAG query: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Error processing RAG query: {str(e)}"
+        ) from e
+
+
+@router.post("/rag-feedback", response_model=RagFeedbackResponse)
+async def rag_feedback(request: RagFeedbackRequest) -> RagFeedbackResponse:
+    """Stores feedback for a RAG pipeline response in Langfuse."""
+    try:
+        score = langfuse_client.score(
+            id=request.score_id,
+            trace_id=request.trace_id,
+            data_type="BOOLEAN",
+            name="helpful",
+            value=request.helpful,
+            comment=request.comment,
+        )
+
+        logger.info(
+            (
+                f"RAG feedback {'updated' if request.score_id else 'created'} "
+                f"for trace {request.trace_id}: helpful={request.helpful}, "
+                f"comment={request.comment}"
+            )
+        )
+
+        return RagFeedbackResponse(score_id=score.id)
+    except Exception as e:
+        logger.error(f"Error submitting RAG feedback: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Error submitting feedback: {str(e)}"
         ) from e

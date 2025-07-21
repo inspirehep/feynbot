@@ -14,7 +14,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-import { ChatMessage, PaperDetails, QueryRequest } from "@/types";
+import {
+  ChatMessage,
+  PaperDetails,
+  PaperResponse,
+  QueryRequest,
+} from "@/types";
 
 interface PaperChatProps {
   activePaper: PaperDetails;
@@ -72,7 +77,7 @@ const PaperChat = ({ activePaper }: PaperChatProps) => {
         history: chatHistory,
       };
 
-      const paperResponseData: { long_answer: string } = await fetch(
+      const paperResponseData: PaperResponse = await fetch(
         `${getInspireAiUrl()}/v1/query-rag`,
         {
           method: "POST",

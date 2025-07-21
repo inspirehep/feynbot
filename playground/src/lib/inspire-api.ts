@@ -183,36 +183,3 @@ export function convertInspirePaperToAppFormat(
     document_url: metadata.documents?.find((d) => d.source == "arxiv")?.url,
   };
 }
-
-/**
- * Get random papers for initial display
- */
-// export async function getRandomPapers(count = 4): Promise<any[]> {
-//   // Get some recent papers with high citation counts
-//   const params: InspireSearchParams = {
-//     q: "topcite 100+",
-//     sort: "mostrecent",
-//     size: count,
-//     fields: [
-//       "titles",
-//       "authors.full_name",
-//       "authors.affiliations.value",
-//       "collaborations",
-//       "abstracts",
-//       "publication_info",
-//       "citation_count",
-//       "earliest_date",
-//       "arxiv_eprints",
-//       "dois",
-//       "document_type",
-//     ],
-//   };
-
-//   try {
-//     const response = await searchPapers(params);
-//     return response.hits.hits.map(convertInspirePaperToAppFormat);
-//   } catch (error) {
-//     console.error("Error fetching random papers:", error);
-//     return [];
-//   }
-// }

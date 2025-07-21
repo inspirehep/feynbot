@@ -28,7 +28,9 @@ class QueryResponse(BaseModel):
     brief_answer: str
     long_answer: str
     citations: List[Citation]
+    trace_id: str
 
 
 class QueryPaperResponse(BaseModel):
     long_answer: str
+    trace_id: str
