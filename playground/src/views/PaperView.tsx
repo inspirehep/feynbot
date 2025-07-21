@@ -60,7 +60,7 @@ const PaperView = ({
               {generalResponse ? (
                 <div className="relative flex-none border-b pb-6">
                   <ResponseView
-                    fullResponse={generalResponse}
+                    response={generalResponse}
                     onPaperClick={onPaperClick}
                     activePaper={activePaper}
                     isCollapsible={true}

@@ -1,6 +1,10 @@
+import { useFeedback } from "@/contexts/FeedbackContext";
 import { usePDFCache } from "@/hooks/usePDFCache";
 import { usePaperChatHistory } from "@/hooks/usePaperChatHistory";
-import { convertInspirePaperToAppFormat, getPaperById } from "@/lib/api";
+import {
+  convertInspirePaperToAppFormat,
+  getPaperById,
+} from "@/lib/inspire-api";
 import { getInspireAiUrl, getPDFWithCache, getPaperUrl } from "@/lib/utils";
 import PaperView from "@/views/PaperView";
 import { ResponseView } from "@/views/ResponseView";
@@ -29,6 +33,7 @@ const PrimaryView = () => {
   const [activePaper, setActivePaper] = useState<PaperDetails | null>(null);
 
   const { clearAllHistories } = usePaperChatHistory();
+  const { resetFeedback } = useFeedback();
 
   const {
     clearCache,
@@ -49,6 +54,7 @@ const PrimaryView = () => {
 
   const handleGeneralSearch = async () => {
     clearCache();
+    resetFeedback();
     setActivePaper(null);
     clearAllHistories();
     setIsLoading(true);
@@ -233,7 +239,7 @@ const PrimaryView = () => {
             response && (
               <div>
                 <ResponseView
-                  fullResponse={response}
+                  response={response}
                   onPaperClick={handlePaperClick}
                   activePaper={activePaper}
                 />

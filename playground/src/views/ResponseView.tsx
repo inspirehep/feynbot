@@ -1,11 +1,27 @@
+import { useFeedback } from "@/contexts/FeedbackContext";
+import { submitRagFeedback } from "@/lib/ai-api";
 import { cn } from "@/lib/utils";
-import { Check, Copy, ThumbsDown, ThumbsUp } from "lucide-react";
+import {
+  Check,
+  Copy,
+  MessageSquare,
+  MessageSquareText,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react";
 import { useState } from "react";
 import Latex from "react-latex-next";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
@@ -15,7 +31,7 @@ import {
 import { LLMResponse, PaperDetails } from "@/types";
 
 interface ResponseViewProps {
-  fullResponse: LLMResponse;
+  response: LLMResponse;
   onPaperClick: (paperId: number) => void;
   activePaper: PaperDetails | null;
   isCollapsible?: boolean;
@@ -23,13 +39,13 @@ interface ResponseViewProps {
 }
 
 export function ResponseView({
-  fullResponse,
+  response,
   onPaperClick,
   activePaper,
   isCollapsible = false,
   isExpanded = true,
 }: ResponseViewProps) {
-  const { brief_answer, long_answer, citations } = fullResponse;
+  const { brief_answer, long_answer, citations, trace_id } = response;
 
   // Replace citation references with clickable badges with the right number
   const renderTextWithCitations = (text: string) => {
@@ -64,11 +80,63 @@ export function ResponseView({
 
   const ActionButtons = () => {
     const [copied, setCopied] = useState(false);
+    const [comment, setComment] = useState("");
+    const [commentPopoverOpen, setCommentPopoverOpen] = useState(false);
+
+    const {
+      feedbackState,
+      setFeedback,
+      setScoreId,
+      setSubmittingFeedback,
+      setSubmittedComment,
+    } = useFeedback();
+
+    const { feedback, scoreId, submittingFeedback, submittedComment } =
+      feedbackState;
 
     const copyToClipboard = () => {
       navigator.clipboard.writeText(long_answer.replace(/\s*\[(\d+)\]/g, ""));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleFeedback = async (helpful?: boolean) => {
+      if (submittingFeedback) return;
+
+      setSubmittingFeedback(true);
+
+      try {
+        const helpfulValue = helpful ?? feedback ?? true;
+        const isCommentSubmission = helpful === undefined;
+        const commentValue = isCommentSubmission
+          ? comment?.trim() || submittedComment
+          : submittedComment;
+
+        const response = await submitRagFeedback(
+          trace_id,
+          helpfulValue,
+          commentValue,
+          scoreId,
+        );
+
+        if (isCommentSubmission && comment?.trim()) {
+          setSubmittedComment(comment.trim());
+          setCommentPopoverOpen(false);
+          setComment("");
+        }
+
+        toast.success(
+          feedback == null
+            ? "Thank you for your feedback!"
+            : "Feedback updated",
+        );
+        setFeedback(helpfulValue);
+        setScoreId(response.score_id);
+      } catch {
+        toast.error("Failed to submit feedback");
+      } finally {
+        setSubmittingFeedback(false);
+      }
     };
 
     return (
@@ -93,11 +161,82 @@ export function ResponseView({
           />
           <span className="sr-only">{copied ? "Copied" : "Copy response"}</span>
         </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Popover open={commentPopoverOpen} onOpenChange={setCommentPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" disabled={!!submittedComment}>
+              <MessageSquare
+                className={cn(
+                  "absolute h-4 w-4 transition-all duration-300",
+                  submittedComment
+                    ? "scale-50 opacity-0"
+                    : "scale-100 opacity-100",
+                )}
+              />
+              <MessageSquareText
+                className={cn(
+                  "absolute h-4 w-4 transition-all duration-300",
+                  submittedComment
+                    ? "scale-100 opacity-100"
+                    : "scale-50 opacity-0",
+                )}
+              />
+              <span className="sr-only">Submit a comment</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80">
+            <div className="space-y-3">
+              <h4 className="font-medium">Submit a comment</h4>
+              <Textarea
+                placeholder="Please share your thoughts about this response to help us improve"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                className="min-h-[100px]"
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setCommentPopoverOpen(false);
+                    setComment("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => handleFeedback()}
+                  disabled={submittingFeedback || !comment?.trim()}
+                >
+                  Submit
+                </Button>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            feedback === true &&
+              "text-green-600 disabled:opacity-100 dark:text-green-400",
+          )}
+          onClick={() => handleFeedback(true)}
+          disabled={submittingFeedback || feedback === true}
+        >
           <ThumbsUp className="h-4 w-4" />
           <span className="sr-only">Helpful</span>
         </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            feedback === false &&
+              "text-red-600 disabled:opacity-100 dark:text-red-400",
+          )}
+          onClick={() => handleFeedback(false)}
+          disabled={submittingFeedback || feedback === false}
+        >
           <ThumbsDown className="h-4 w-4" />
           <span className="sr-only">Not helpful</span>
         </Button>

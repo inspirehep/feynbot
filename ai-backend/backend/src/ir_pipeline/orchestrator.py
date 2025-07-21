@@ -46,6 +46,7 @@ def create_langfuse_config(user: str = None):
             "langfuse_session_id": str(uuid.uuid4()),
             **({"langfuse_user_id": user} if user else {}),
         },
+        "run_id": str(uuid.uuid4()),  # Manual trace ID for feedback
     }
 
 
@@ -272,6 +273,7 @@ async def search_rag(query: str, model: str, user: str = None):
         brief_answer=response.brief,
         long_answer=formatted_response,
         citations=citations,
+        trace_id=config.get("run_id"),
     )
 
 
@@ -305,5 +307,5 @@ async def search_rag_paper(
     formatted_response, _ = format_refs(response.response, ranked_docs)
 
     return QueryPaperResponse(
-        long_answer=formatted_response,
+        long_answer=formatted_response, trace_id=config.get("run_id")
     )
