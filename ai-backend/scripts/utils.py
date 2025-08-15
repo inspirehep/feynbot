@@ -49,10 +49,18 @@ def get_vector_os_client(embedding_function, index_name="vector_demo_langchain")
     )
 
 
-def get_os_query(full_text_available=True):
+def get_os_query(full_text_available=True, inspire_category=None, arxiv_category=None):
     query = {"bool": {"must": []}}
     if full_text_available:
         query["bool"]["must"].append({"term": {"documents.source": "arxiv"}})
+    if inspire_category:
+        query["bool"]["must"].append(
+            {"term": {"inspire_categories.term": inspire_category}}
+        )
+    if arxiv_category:
+        query["bool"]["must"].append(
+            {"term": {"arxiv_eprints.categories": arxiv_category}}
+        )
     return query
 
 

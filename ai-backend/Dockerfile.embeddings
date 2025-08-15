@@ -1,0 +1,32 @@
+FROM python:3.11.8-slim AS builder
+WORKDIR /app
+
+RUN pip install --no-cache-dir poetry
+
+ENV POETRY_NO_INTERACTION=1 \
+  POETRY_VIRTUALENVS_IN_PROJECT=1 \
+  POETRY_VIRTUALENVS_CREATE=1 \
+  POETRY_CACHE_DIR=/tmp/poetry_cache
+
+COPY pyproject.toml poetry.lock* ./
+COPY backend/ ./backend/
+COPY scripts/ ./scripts/
+
+RUN poetry install --no-root && rm -rf $POETRY_CACHE_DIR
+
+# Final image
+FROM python:3.11.8-slim
+ENV VIRTUAL_ENV=/app/.venv \
+  PATH="/app/.venv/bin:$PATH"
+WORKDIR /app
+
+COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/backend /app/backend
+COPY --from=builder /app/scripts /app/scripts
+
+RUN useradd --create-home --shell /bin/bash embeddings
+USER embeddings
+
+ENV PYTHONPATH="/app/backend/src:${PYTHONPATH}"
+
+CMD ["python", "/app/scripts/embeddings_acc_k8s.py"]
