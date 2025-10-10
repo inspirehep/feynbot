@@ -1,6 +1,8 @@
 /**
  * Service for interacting with the INSPIRE HEP API
  */
+import type { PaperDetails } from "@/types";
+
 import { getInspireBaseUrl } from "./utils";
 
 const API_BASE_URL = `${getInspireBaseUrl()}/api`;
@@ -127,7 +129,7 @@ export async function searchPapers(
  * Get a specific paper by ID
  * Passes the UI content-type in order to fech some extra details like inspire PDF URL
  */
-export async function getPaperById(id: string): Promise<InspirePaper> {
+export async function getPaperById(id: number): Promise<InspirePaper> {
   const url = `${API_BASE_URL}/literature/${id}`;
 
   try {
@@ -153,12 +155,11 @@ export async function getPaperById(id: string): Promise<InspirePaper> {
  */
 export function convertInspirePaperToAppFormat(
   inspirePaper: InspirePaper,
-  highlight?: string,
-) {
+): PaperDetails {
   const metadata = inspirePaper.metadata;
 
   return {
-    id: inspirePaper.id,
+    id: parseInt(inspirePaper.id),
     title: metadata.titles[0]?.title || "Untitled",
     authors: metadata.authors.map((author) => author.full_name),
     collaborations:
@@ -175,7 +176,6 @@ export function convertInspirePaperToAppFormat(
         : "Unknown"),
     affiliation: metadata.authors[0]?.affiliations?.[0]?.value || "",
     abstract: metadata.abstracts?.[0]?.value || "No abstract available",
-    highlight: highlight,
     citation_count: metadata.citation_count || 0,
     arxiv_id: metadata.arxiv_eprints?.[0]?.value,
     doi: metadata.dois?.[0]?.value,

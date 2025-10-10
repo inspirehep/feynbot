@@ -18,10 +18,20 @@ class QueryRequest(BaseModel):
     history: Optional[List[ChatMessage]] = None
 
 
+class BoundingBox(BaseModel):
+    page_no: int
+    left: float
+    top: float
+    right: float
+    bottom: float
+    coord_origin: str
+
+
 class Citation(BaseModel):
     doc_id: int
     control_number: int
     snippet: str
+    bboxes: List[BoundingBox]
 
 
 class QueryResponse(BaseModel):

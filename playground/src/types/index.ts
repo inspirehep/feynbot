@@ -1,15 +1,23 @@
-import { convertInspirePaperToAppFormat } from "@/lib/inspire-api";
+export type BoundingBox = {
+  page_no: number;
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  coord_origin: string;
+};
 
 export type LLMCitation = {
   doc_id: number;
   control_number: number;
   snippet: string;
+  bboxes: BoundingBox[];
 };
 
 export type LLMResponse = {
   brief_answer: string;
   long_answer: string;
-  citations: Record<string, LLMCitation>;
+  citations: LLMCitation[];
   trace_id: string;
 };
 
@@ -29,12 +37,18 @@ export type PaperResponse = {
   trace_id: string;
 };
 
-// TODO: define proper type in api.ts
-export type PaperDetails = ReturnType<typeof convertInspirePaperToAppFormat>;
-
-export type FormattedCitation = {
+export type PaperDetails = {
   id: number;
-  display: number;
-  paper: PaperDetails;
-  snippets: string[];
+  title: string;
+  authors: string[];
+  collaborations: string[];
+  year?: number;
+  journal: string;
+  affiliation: string;
+  abstract: string;
+  citation_count: number;
+  arxiv_id?: string;
+  doi?: string;
+  document_type?: string;
+  document_url?: string;
 };

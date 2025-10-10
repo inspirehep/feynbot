@@ -28,11 +28,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import { LLMResponse, PaperDetails } from "@/types";
+import { BoundingBox, LLMResponse, PaperDetails } from "@/types";
 
 interface ResponseViewProps {
   response: LLMResponse;
-  onPaperClick: (paperId: number) => void;
+  onCitationClick: (paperId: number, bboxes: BoundingBox[]) => void;
   activePaper: PaperDetails | null;
   isCollapsible?: boolean;
   isExpanded?: boolean;
@@ -40,7 +40,7 @@ interface ResponseViewProps {
 
 export function ResponseView({
   response,
-  onPaperClick,
+  onCitationClick,
   activePaper,
   isCollapsible = false,
   isExpanded = true,
@@ -55,14 +55,18 @@ export function ResponseView({
 
       const citation = citations[Number(match[1]) - 1];
 
-      if (!citation) return part[0];
+      if (!citation) return part;
 
       return (
         <Tooltip delayDuration={300} key={index}>
           <TooltipTrigger asChild>
             <span>
               <Badge
-                onClick={() => onPaperClick(citation.control_number)}
+                onClick={() =>
+                  // Note that we can have multiple citations referencing the same paper so we need to pass
+                  // the bboxes here since we won't be able to get them from the paper control_number alone
+                  onCitationClick(citation.control_number, citation.bboxes)
+                }
                 className="text-primary cursor-pointer rounded-full font-medium hover:underline"
                 variant="secondary"
               >

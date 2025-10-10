@@ -14,22 +14,28 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 
-import { FormattedCitation, LLMResponse, PaperDetails } from "@/types";
+import { BoundingBox, LLMCitation, LLMResponse, PaperDetails } from "@/types";
 
 interface PaperViewProps {
   activePaper: PaperDetails;
   onClose: () => void;
-  formattedCitations: FormattedCitation[];
+  papers: PaperDetails[];
+  citations: LLMCitation[];
   onPaperClick: (paperId: number) => void;
+  onCitationClick: (paperId: number, bboxes: BoundingBox[]) => void;
   generalResponse: LLMResponse | null;
+  activeBboxes?: BoundingBox[];
 }
 
 const PaperView = ({
   activePaper,
   onClose,
-  formattedCitations,
+  papers,
+  citations,
   onPaperClick,
+  onCitationClick,
   generalResponse,
+  activeBboxes,
 }: PaperViewProps) => {
   const resizableGroup = useRef<ImperativePanelGroupHandle>(null);
   const [isGeneralResponseExpanded, setIsGeneralResponseExpanded] =
@@ -45,8 +51,9 @@ const PaperView = ({
             <div className="relative h-full">
               <div className="after:from-background h-full after:absolute after:right-0 after:bottom-0 after:left-0 after:h-12 after:bg-gradient-to-t after:to-transparent">
                 <PDFManager
-                  papers={formattedCitations.map((c) => c.paper)}
+                  papers={papers}
                   activePaper={activePaper}
+                  activeBboxes={activeBboxes}
                 />
               </div>
             </div>
@@ -61,7 +68,7 @@ const PaperView = ({
                 <div className="relative flex-none border-b pb-6">
                   <ResponseView
                     response={generalResponse}
-                    onPaperClick={onPaperClick}
+                    onCitationClick={onCitationClick}
                     activePaper={activePaper}
                     isCollapsible={true}
                     isExpanded={isGeneralResponseExpanded}
@@ -104,12 +111,15 @@ const PaperView = ({
 
       <div className="relative px-4">
         <div className="flex gap-4 overflow-x-auto p-4">
-          {formattedCitations.map((citation) => (
-            <div key={citation.id} className="min-w-[300px]">
+          {papers.map((paper) => (
+            <div key={paper.id} className="min-w-[300px]">
               <PaperCard
-                formattedCitation={citation}
-                isActive={activePaper?.id === citation.paper.id}
-                onClick={() => onPaperClick(citation.id)}
+                paper={paper}
+                citations={citations.filter(
+                  (c) => c.control_number === paper.id,
+                )}
+                isActive={activePaper?.id === paper.id}
+                onClick={() => onPaperClick(paper.id)}
                 displayType="footer"
               />
             </div>

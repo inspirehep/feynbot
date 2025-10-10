@@ -23,7 +23,7 @@ export const getInspireBaseUrl = (() => {
 export const getInspireAiUrl = () =>
   `${import.meta.env.DEV ? "" : getInspireBaseUrl()}/ai`;
 
-export const getCitationsUrl = (paperId: string) => {
+export const getCitationsUrl = (paperId: number) => {
   return `${getInspireBaseUrl()}/literature?q=refersto%3Arecid%3A${paperId}`;
 };
 

@@ -40,7 +40,7 @@ export function PaperHeader({ paper, onClose }: PaperHeaderProps) {
     <div className="bg-background/95 fixed top-0 right-0 left-0 h-[5rem] border-b py-4 pl-0 backdrop-blur">
       <div className="flex h-full items-center justify-between">
         <div className="flex items-center gap-4">
-          <div>
+          <div className="flex flex-row items-center">
             <Button
               variant="ghost"
               size="icon"
@@ -50,7 +50,6 @@ export function PaperHeader({ paper, onClose }: PaperHeaderProps) {
             >
               <ArrowLeft className="size-10" strokeWidth={1.1} />
             </Button>
-
             <Button
               variant="ghost"
               size="icon"

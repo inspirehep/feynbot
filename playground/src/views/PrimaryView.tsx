@@ -18,7 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Loading } from "@/components/ui/loading";
 
 import {
-  FormattedCitation,
+  BoundingBox,
+  LLMCitation,
   LLMResponse,
   PaperDetails,
   QueryRequest,
@@ -31,6 +32,7 @@ const PrimaryView = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<LLMResponse | null>(null);
   const [activePaper, setActivePaper] = useState<PaperDetails | null>(null);
+  const [activeBboxes, setActiveBboxes] = useState<BoundingBox[]>([]);
 
   const { clearAllHistories } = usePaperChatHistory();
   const { resetFeedback } = useFeedback();
@@ -43,9 +45,8 @@ const PrimaryView = () => {
     setPendingRequest,
   } = usePDFCache();
 
-  const [formattedCitations, setFormattedCitations] = useState<
-    FormattedCitation[]
-  >([]);
+  const [papers, setPapers] = useState<PaperDetails[]>([]);
+  const [citations, setCitations] = useState<LLMCitation[]>([]);
 
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
@@ -73,51 +74,27 @@ const PrimaryView = () => {
         },
       ).then((res) => res.json());
 
-      const paperCache: Record<
-        number,
-        {
-          paper: PaperDetails;
-          snippets: string[];
+      const uniquePaperIds = [
+        ...new Set(llmResponse.citations.map((c) => c.control_number)),
+      ];
+
+      // Fetch papers in parallel
+      const paperPromises = uniquePaperIds.map(async (paperId) => {
+        try {
+          const inspirePaper = await getPaperById(paperId);
+          return convertInspirePaperToAppFormat(inspirePaper);
+        } catch {
+          toast.error(`Failed to fetch paper ${paperId}`);
+          return null;
         }
-      > = {};
-      const allPromises: Promise<FormattedCitation | null>[] = [];
+      });
 
-      for (const citation of Object.values(llmResponse.citations)) {
-        const { doc_id, control_number, snippet } = citation;
-
-        if (paperCache[control_number]) {
-          // If paper is in cache, add the new snippet to its snippets array
-          paperCache[control_number].snippets.push(snippet);
-        } else {
-          // If paper is not in cache, fetch it and it to cache with the paper data and snippet
-          paperCache[control_number] = {
-            paper: {} as PaperDetails,
-            snippets: [snippet],
-          };
-          const fetchPaperPromise = getPaperById(control_number.toString())
-            .then((paper) => {
-              const appPaper = convertInspirePaperToAppFormat(paper, snippet);
-              paperCache[control_number].paper = appPaper;
-              return {
-                id: control_number,
-                display: doc_id,
-                paper: appPaper,
-                snippets: paperCache[control_number].snippets,
-              } as FormattedCitation;
-            })
-            .catch((error) => {
-              toast.error(`Failed to fetch paper ${control_number}:`, error);
-              return null;
-            });
-          allPromises.push(fetchPaperPromise);
-        }
-      }
-
-      const citationDetails = (await Promise.all(allPromises)).filter(
-        (detail): detail is FormattedCitation => detail !== null,
+      const fetchedPapers = (await Promise.all(paperPromises)).filter(
+        (paper): paper is PaperDetails => paper !== null,
       );
 
-      setFormattedCitations(citationDetails);
+      setPapers(fetchedPapers);
+      setCitations(llmResponse.citations);
       setResponse(llmResponse);
     } catch {
       toast.error("Something went wrong. Please try again later.");
@@ -127,9 +104,13 @@ const PrimaryView = () => {
   };
 
   const handlePaperClick = (paperId: number) => {
-    setActivePaper(
-      formattedCitations.find((p) => p.id === paperId)?.paper as PaperDetails,
-    );
+    setActivePaper(papers.find((p) => p.id === paperId) || null);
+    setActiveBboxes([]);
+  };
+
+  const handleCitationClick = (paperId: number, bboxes: BoundingBox[]) => {
+    setActivePaper(papers.find((p) => p.id === paperId) || null);
+    setActiveBboxes(bboxes);
   };
 
   const renderSearchForm = () => (
@@ -162,8 +143,7 @@ const PrimaryView = () => {
   // Pre-fetch all PDFs
   useEffect(() => {
     const prefetchPDFs = async () => {
-      const fetchPromises = formattedCitations.map(async (citation) => {
-        const paper = citation.paper;
+      const fetchPromises = papers.map(async (paper) => {
         const pdfUrl = getPaperUrl(paper);
 
         if (pdfUrl) {
@@ -180,16 +160,10 @@ const PrimaryView = () => {
       await Promise.all(fetchPromises);
     };
 
-    if (formattedCitations.length > 0) {
+    if (papers.length > 0) {
       prefetchPDFs();
     }
-  }, [
-    formattedCitations,
-    getCachedPDF,
-    cachePDF,
-    getPendingRequest,
-    setPendingRequest,
-  ]);
+  }, [papers, getCachedPDF, cachePDF, getPendingRequest, setPendingRequest]);
 
   if (activePaper) {
     return (
@@ -197,10 +171,14 @@ const PrimaryView = () => {
         activePaper={activePaper}
         onClose={() => {
           setActivePaper(null);
+          setActiveBboxes([]);
         }}
-        formattedCitations={formattedCitations}
+        papers={papers}
+        citations={citations}
         onPaperClick={handlePaperClick}
+        onCitationClick={handleCitationClick}
         generalResponse={response}
+        activeBboxes={activeBboxes}
       />
     );
   }
@@ -240,17 +218,20 @@ const PrimaryView = () => {
               <div>
                 <ResponseView
                   response={response}
-                  onPaperClick={handlePaperClick}
+                  onCitationClick={handleCitationClick}
                   activePaper={activePaper}
                 />
                 <div className="mt-4 space-y-2">
                   <h3 className="text-lg font-semibold">Related Papers</h3>
                   <div className="grid grid-cols-1 gap-4 transition-all duration-300 md:grid-cols-2">
-                    {formattedCitations.map((citation) => (
-                      <div key={citation.id} className="h-full min-w-[300px]">
+                    {papers.map((paper) => (
+                      <div key={paper.id} className="h-full min-w-[300px]">
                         <PaperCard
-                          formattedCitation={citation}
-                          onClick={() => handlePaperClick(citation.id)}
+                          paper={paper}
+                          citations={citations.filter(
+                            (c) => c.control_number === paper.id,
+                          )}
+                          onClick={() => handlePaperClick(paper.id)}
                         />
                       </div>
                     ))}

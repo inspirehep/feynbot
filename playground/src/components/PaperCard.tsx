@@ -15,23 +15,23 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import { FormattedCitation } from "@/types";
+import { LLMCitation, PaperDetails } from "@/types";
 
 interface PaperCardProps {
-  formattedCitation: FormattedCitation;
+  paper: PaperDetails;
+  citations?: LLMCitation[];
   onClick: () => void;
   displayType?: "full" | "footer";
   isActive?: boolean;
 }
 
 export function PaperCard({
-  formattedCitation,
+  paper,
+  citations = [],
   onClick,
   displayType = "full",
   isActive = false,
 }: PaperCardProps) {
-  const { paper, display, snippets } = formattedCitation;
-
   const handleCitationsClick = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     window.open(getCitationsUrl(paper.id), "_blank");
@@ -49,9 +49,11 @@ export function PaperCard({
       <CardHeader>
         <CardTitle className="flex items-center justify-between text-base">
           <span className="line-clamp-2">{paper.title}</span>
-          <span className="text-muted-foreground ml-2 self-start text-sm">
-            #{display}
-          </span>
+          {citations.length > 0 && (
+            <span className="text-muted-foreground ml-2 self-start text-sm">
+              {citations.map((c) => `#${c.doc_id}`).join(",")}
+            </span>
+          )}
         </CardTitle>
         <CardDescription className="flex items-center justify-between text-xs">
           <span className="flex items-center">
@@ -82,10 +84,17 @@ export function PaperCard({
       </CardHeader>
       {displayType === "full" && (
         <CardContent>
-          {snippets.length > 0 && (
-            <blockquote className="border-muted line-clamp-3 border-l-2 pl-3 text-sm italic">
-              "{snippets[0]}"
-            </blockquote>
+          {citations.length > 0 ? (
+            <div className="line-clamp-3 text-sm italic">
+              "{citations[0].snippet}"
+            </div>
+          ) : (
+            paper.abstract &&
+            paper.abstract !== "No abstract available" && (
+              <p className="text-muted-foreground line-clamp-3 text-sm">
+                {paper.abstract}
+              </p>
+            )
           )}
           <div className="text-muted-foreground mt-4 flex items-center justify-between text-xs">
             <span className="max-w-[70%] truncate">{paper.journal}</span>

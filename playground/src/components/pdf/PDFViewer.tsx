@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import PDFSearch from "@/components/pdf/PDFSearch";
 import { Loading } from "@/components/ui/loading";
 
+import { BoundingBox } from "@/types";
+
 GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.mjs",
   import.meta.url,
@@ -26,10 +28,10 @@ GlobalWorkerOptions.workerSrc = new URL(
 
 const PDFViewer = ({
   pdfUrl,
-  highlight,
+  activeBboxes,
 }: {
   pdfUrl: string;
-  highlight?: string;
+  activeBboxes?: BoundingBox[];
 }) => {
   const { getCachedPDF, cachePDF, getPendingRequest, setPendingRequest } =
     usePDFCache();
@@ -63,24 +65,26 @@ const PDFViewer = ({
 
   return (
     <div className="relative">
-      <Root
-        source={effectivePdfUrl}
-        className="h-[calc(100vh-15rem)] overflow-y-auto"
-        loader={<LoadingSpinner />}
-        isZoomFitWidth
-      >
-        <Search>
-          <PDFSearch highlight={highlight} />
-        </Search>
-        <Pages className="dark:brightness-[80%] dark:contrast-[228%] dark:hue-rotate-180 dark:invert-[94%]">
-          <Page>
-            <CanvasLayer />
-            <TextLayer />
-            <AnnotationLayer />
-            <HighlightLayer className="bg-yellow-200/70" />
-          </Page>
-        </Pages>
-      </Root>
+      {effectivePdfUrl && (
+        <Root
+          source={effectivePdfUrl}
+          className="h-[calc(100vh-15rem)] overflow-y-auto"
+          loader={<LoadingSpinner />}
+          isZoomFitWidth
+        >
+          <Search>
+            <PDFSearch activeBboxes={activeBboxes} />
+          </Search>
+          <Pages className="dark:brightness-[80%] dark:contrast-[228%] dark:hue-rotate-180 dark:invert-[94%]">
+            <Page>
+              <CanvasLayer />
+              <TextLayer />
+              <AnnotationLayer />
+              <HighlightLayer className="bg-yellow-400/30 dark:bg-yellow-700/30" />
+            </Page>
+          </Pages>
+        </Root>
+      )}
     </div>
   );
 };

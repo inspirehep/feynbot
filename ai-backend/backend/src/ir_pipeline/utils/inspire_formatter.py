@@ -1,7 +1,7 @@
 import re
 from typing import Dict, List, Tuple
 
-from backend.src.schemas.query import Citation
+from backend.src.schemas.query import BoundingBox, Citation
 
 
 def extract_context(results: Dict, use_highlights: bool = False) -> str:
@@ -133,6 +133,31 @@ def format_docs(docs):
     return res
 
 
+def extract_bboxes_from_doc(doc) -> List[BoundingBox]:
+    bboxes = []
+
+    dl_meta = doc.metadata.get("dl_meta", {})
+    doc_items = dl_meta.get("doc_items", [])
+
+    for doc_item in doc_items:
+        prov_list = doc_item.get("prov", [])
+        for prov in prov_list:
+            bbox_data = prov.get("bbox", {})
+            if bbox_data:
+                bboxes.append(
+                    BoundingBox(
+                        page_no=prov.get("page_no", 1),
+                        left=bbox_data.get("l", 0.0),
+                        top=bbox_data.get("t", 0.0),
+                        right=bbox_data.get("r", 0.0),
+                        bottom=bbox_data.get("b", 0.0),
+                        coord_origin=bbox_data.get("coord_origin", "BOTTOMLEFT"),
+                    )
+                )
+
+    return bboxes
+
+
 def format_refs(answer, docs):
     unique_ordered = []
     for match in re.finditer(r"\[(\d+)\]", answer):
@@ -157,11 +182,14 @@ def format_refs(answer, docs):
 
         answer = answer.replace(f"[{i}]", f"[__NEW_REF_ID_{doc_id}]")
 
+        bboxes = extract_bboxes_from_doc(doc)
+
         citations.append(
             Citation(
                 doc_id=doc_id,
                 control_number=control_number,
                 snippet=doc.page_content,
+                bboxes=bboxes,
             )
         )
 
