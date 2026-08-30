@@ -252,7 +252,15 @@ async def create_search_feedback(
     return {}
 
 
-@router.get("/export-search-feedback")
+@router.get(
+    "/export-search-feedback",
+    responses={
+        200: {
+            "content": {"text/csv": {"schema": {"type": "string"}}},
+            "description": "Search feedback in JSON or CSV format.",
+        }
+    },
+)
 async def export_feedback(
     start_date: datetime,
     end_date: datetime,
@@ -260,7 +268,7 @@ async def export_feedback(
     export_csv: bool = False,
     _: str = Depends(authenticate),
 ):
-    """Export search feedback within date range. In CSV format if csv=True."""
+    """Export search feedback within date range as JSON or CSV."""
     feedbacks = (
         db.query(SearchFeedback)
         .filter(
@@ -269,7 +277,7 @@ async def export_feedback(
         .all()
     )
 
-    if csv:
+    if export_csv:
         output = StringIO()
         writer = csv.writer(output)
 
